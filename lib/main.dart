@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:attendanceapp/model/user.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +30,7 @@ class MyApp extends StatelessWidget {
 }
 
 class AuthCheck extends StatefulWidget {
-  const AuthCheck({Key? key}) : super(key: key);
+  const AuthCheck({super.key});
 
   @override
   _AuthCheckState createState() => _AuthCheckState();
@@ -49,10 +50,12 @@ class _AuthCheckState extends State<AuthCheck> {
     sharedPreferences = await SharedPreferences.getInstance();
 
     try {
-      final storedId = sharedPreferences.getString('studentId');
-      setState(() {
-        userAvailable = storedId != null && storedId.isNotEmpty;
-      });
+      if (sharedPreferences.getString('studentId') != null) {
+        setState(() {
+          User.username = sharedPreferences.getString('studentId')!;
+          userAvailable = true;
+        });
+      }
     } catch (e) {
       setState(() {
         userAvailable = false;

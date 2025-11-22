@@ -186,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: Row(
         children: [
-          Container(
+          SizedBox(
             width: screenWidth / 6,
             child: Icon(Icons.person, color: primary, size: screenWidth / 15),
           ),
