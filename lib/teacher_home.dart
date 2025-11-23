@@ -1,0 +1,91 @@
+import 'package:flutter/material.dart';
+import 'package:attendanceapp/services/auth_service.dart';
+import 'package:attendanceapp/model/user.dart';
+import 'package:attendanceapp/qr_generator_screen.dart';
+import 'package:attendanceapp/verification_screen.dart';
+
+class TeacherHome extends StatelessWidget {
+  const TeacherHome({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Teacher Dashboard',
+          style: TextStyle(fontFamily: 'NexaBold'),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Sign Out'),
+                  content: const Text('Are you sure you want to sign out?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Sign Out'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await AuthService().signOut();
+              }
+            },
+          ),
+          IconButton(
+            tooltip: 'QR Generator',
+            icon: const Icon(Icons.qr_code_2),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const QrGeneratorScreen()),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Verify Accounts',
+            icon: const Icon(Icons.verified_user),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const VerificationScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome Teacher',
+              style: const TextStyle(fontFamily: 'NexaBold', fontSize: 24),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Email: ${User.email}',
+              style: const TextStyle(fontFamily: 'NexaRegular'),
+            ),
+            const SizedBox(height: 24),
+            // Additional teacher-specific actions can go here.
+            const SizedBox(height: 24),
+            const Text(
+              'TODO: Implement teacher tools (attendance review).',
+              style: TextStyle(fontFamily: 'NexaRegular'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

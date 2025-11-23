@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection: allow owner read; allow update limited to non-privileged fields if not approved.
+    match /Users/{uid} {
+      // Allow user to read own doc OR any doc if admin/teacher claim present.
+      allow read: if request.auth != null && (request.auth.uid == uid || request.auth.token.admin == true || request.auth.token.teacher == true);
+      // Allow updates by:
+      // - owner (excluding admin field escalation)
+      // - admin or teacher for status transitions (approval/rejection)
+      allow update: if request.auth != null && (
+        (
+          request.auth.uid == uid && !(request.resource.data.admin == true && request.auth.token.admin != true)
+        ) || (
+          (request.auth.token.admin == true || request.auth.token.teacher == true) && (
+            request.resource.data.keys().hasOnly(['status']) || // approving status only
+            !(request.resource.data.admin == true && request.auth.token.admin != true)
+          )
+        )
+      );
+      allow create: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Pending tokens readable to all (or restrict further).
+    match /Events/{eventId}/activeTokens/{tokenId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Admin-only management collections.
+    match /adminAudit/{docId} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Verification: only admin or teacher may approve/reject.
+    match /Users/{uid} {
+      allow update: if request.auth != null && (request.auth.token.admin == true || request.auth.token.teacher == true);
+    }
+
+    // Fallback deny for everything else.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
