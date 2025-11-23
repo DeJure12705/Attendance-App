@@ -30,6 +30,13 @@ AttendanceApp is a Flutter application for managing and tracking attendance sess
 - QR: (placeholder: e.g. qr_flutter, mobile_scanner)
 - Dependency injection: (placeholder if used)
 
+## Members
+
+- Christian Misal – Project Empress
+- Kenneth D. Lico – Front-End Engineer
+- John Lyold C. Lozada - Backdancer
+- Joseph Claire L. Paquinol – Full-Stack Engineer
+
 ## Architecture
 
 - Layered: presentation / application / domain / data
@@ -383,10 +390,3 @@ Suggested steps:
 
 - Flutter docs: https://docs.flutter.dev/
 - State management patterns: https://docs.flutter.dev/development/data-and-backend/state-mgmt
-
-## Members
-
-- Christian Misal – Project Manager
-- Kenneth D. Lico – Front-End Engineer
-- John Lyold C. Lozada - Backdancer
-- Joseph Claire L. Paquinol – Full-Stack Engineer

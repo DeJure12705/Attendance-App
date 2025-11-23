@@ -89,7 +89,29 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    // Sign out from Firebase
     await _auth.signOut();
+
+    // Sign out from Google Sign-In if user was signed in with Google
+    try {
+      final googleSignIn = GoogleSignIn();
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.signOut();
+        await googleSignIn
+            .disconnect(); // Fully disconnect to force account picker next time
+      }
+    } catch (e) {
+      print('Google sign out error: $e');
+    }
+
+    // Sign out from Facebook if user was signed in with Facebook
+    try {
+      await FacebookAuth.instance.logOut();
+    } catch (e) {
+      print('Facebook sign out error: $e');
+    }
+
+    // Clear user data
     User.uid = '';
     User.role = '';
     User.email = '';
