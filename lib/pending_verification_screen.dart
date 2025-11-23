@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:attendanceapp/services/auth_service.dart';
-import 'package:attendanceapp/role_login_screen.dart';
+import 'package:attendanceapp/login_page.dart';
 
 class PendingVerificationScreen extends StatelessWidget {
   const PendingVerificationScreen({super.key});
@@ -9,7 +9,7 @@ class PendingVerificationScreen extends StatelessWidget {
     await AuthService().signOut();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const RoleLoginScreen()),
+        MaterialPageRoute(builder: (_) => const LoginPage()),
         (route) => false,
       );
     }
@@ -23,15 +23,6 @@ class PendingVerificationScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          TextButton.icon(
-            onPressed: () => _signOut(context),
-            icon: const Icon(Icons.logout, size: 18),
-            label: const Text('Sign Out'),
-            style: TextButton.styleFrom(foregroundColor: Colors.grey[700]),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: SafeArea(
         child: Center(

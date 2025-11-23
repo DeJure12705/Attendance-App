@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:attendanceapp/services/auth_service.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:attendanceapp/config/cloudinary_config.dart';
+import 'package:attendanceapp/login_page.dart';
 import 'terms_conditions_screen.dart';
 import 'pending_verification_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,7 +12,8 @@ import 'dart:io';
 import 'dart:async';
 
 class CompleteCredentialsScreen extends StatefulWidget {
-  const CompleteCredentialsScreen({super.key});
+  final String? forcedRole; // 'student' or 'teacher' to lock the role
+  const CompleteCredentialsScreen({super.key, this.forcedRole});
   @override
   State<CompleteCredentialsScreen> createState() =>
       _CompleteCredentialsScreenState();
@@ -31,12 +33,63 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
   bool _uploadingId = false;
   String? _error;
   String? _uploadProgress;
+  // Additional safety and academic fields
+  final _studentPhoneController = TextEditingController(); // optional
+  final _parentPhoneController =
+      TextEditingController(); // required for students
+  final _guardianNameController =
+      TextEditingController(); // required for students
+  final _sectionController = TextEditingController(); // required for students
+  // Teacher-specific fields
+  final _teacherPhoneController = TextEditingController();
+  final _teacherSectionController = TextEditingController();
+  final _teacherAdviserController = TextEditingController();
+  // Adviser teacher selection (for students)
+  List<Map<String, String>> _teachers = [];
+  String? _selectedTeacherUid;
+  String? _selectedTeacherName;
+  bool _loadingTeachers = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Lock role if provided by the caller and pre-load teacher list when needed
+    _role = widget.forcedRole ?? _role;
+    if (_role == 'student') _loadTeachers();
+  }
+
+  Future<void> _loadTeachers() async {
+    setState(() => _loadingTeachers = true);
+    try {
+      final q = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('role', isEqualTo: 'teacher')
+          .where('status', isEqualTo: 'approved')
+          .get();
+      _teachers = q.docs.map((d) {
+        final data = d.data();
+        final displayName = (data['fullName'] ?? data['email'] ?? 'Teacher')
+            .toString();
+        return {'uid': d.id, 'name': displayName};
+      }).toList();
+    } catch (e) {
+      _error ??= 'Failed to load adviser list: ${e.toString()}';
+    }
+    if (mounted) setState(() => _loadingTeachers = false);
+  }
 
   @override
   void dispose() {
     _idController.dispose();
     _fullNameController.dispose();
     _addressController.dispose();
+    _studentPhoneController.dispose();
+    _parentPhoneController.dispose();
+    _guardianNameController.dispose();
+    _sectionController.dispose();
+    _teacherPhoneController.dispose();
+    _teacherSectionController.dispose();
+    _teacherAdviserController.dispose();
     super.dispose();
   }
 
@@ -190,6 +243,15 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
               'studentId': studentId,
             if (teacherId != null && teacherId.isNotEmpty)
               'teacherId': teacherId,
+            if (_role == 'student')
+              'studentContactPhone': _studentPhoneController.text.trim(),
+            if (_role == 'student')
+              'parentPhone': _parentPhoneController.text.trim(),
+            if (_role == 'student')
+              'guardianName': _guardianNameController.text.trim(),
+            if (_role == 'student') 'section': _sectionController.text.trim(),
+            if (_role == 'student') 'adviserTeacherUid': _selectedTeacherUid,
+            if (_role == 'student') 'adviserTeacherName': _selectedTeacherName,
             'acceptedTerms': true,
             'acceptedTermsAt': FieldValue.serverTimestamp(),
           }..removeWhere((k, v) => v == null);
@@ -353,6 +415,23 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Change account',
+          onPressed: () async {
+            await AuthService().signOut();
+            if (!mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const LoginPage()),
+              (route) => false,
+            );
+          },
+        ),
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),
@@ -383,21 +462,26 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
                         style: const TextStyle(fontFamily: 'NexaRegular'),
                       ),
                       const SizedBox(height: 20),
-                      SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(
-                            value: 'student',
-                            label: Text('Student'),
-                          ),
-                          ButtonSegment(
-                            value: 'teacher',
-                            label: Text('Teacher'),
-                          ),
-                        ],
-                        selected: {_role},
-                        onSelectionChanged: (s) =>
-                            setState(() => _role = s.first),
-                      ),
+                      if (widget.forcedRole == null)
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(
+                              value: 'student',
+                              label: Text('Student'),
+                            ),
+                            ButtonSegment(
+                              value: 'teacher',
+                              label: Text('Teacher'),
+                            ),
+                          ],
+                          selected: {_role},
+                          onSelectionChanged: (s) async {
+                            setState(() => _role = s.first);
+                            if (_role == 'student' && _teachers.isEmpty) {
+                              await _loadTeachers();
+                            }
+                          },
+                        ),
                       if (_role == 'student' || _role == 'teacher') ...[
                         const SizedBox(height: 20),
                         TextFormField(
@@ -449,6 +533,167 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
                             return null;
                           },
                         ),
+                        if (_role == 'teacher') ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _teacherPhoneController,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              labelText: 'Contact Number',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (_role == 'teacher' &&
+                                  (v == null || v.trim().isEmpty)) {
+                                return 'Contact number required';
+                              }
+                              if (v != null && v.trim().isNotEmpty) {
+                                final reg = RegExp(r'^[0-9+\-() ]{7,}$');
+                                if (!reg.hasMatch(v.trim())) {
+                                  return 'Invalid phone format';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _teacherSectionController,
+                            decoration: const InputDecoration(
+                              labelText: 'Section / Advisory',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (_role == 'teacher' &&
+                                  (v == null || v.trim().isEmpty)) {
+                                return 'Section required';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _teacherAdviserController,
+                            decoration: const InputDecoration(
+                              labelText: 'Adviser',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (_role == 'teacher' &&
+                                  (v == null || v.trim().isEmpty)) {
+                                return 'Adviser required';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                        if (_role == 'student') ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _studentPhoneController,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              labelText: 'Student Contact Number (Optional)',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (v != null && v.trim().isNotEmpty) {
+                                final reg = RegExp(r'^[0-9+\-() ]{7,}$');
+                                if (!reg.hasMatch(v.trim())) {
+                                  return 'Invalid phone format';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _parentPhoneController,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              labelText: 'Parent Phone Number',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (_role == 'student' &&
+                                  (v == null || v.trim().isEmpty)) {
+                                return 'Parent phone required';
+                              }
+                              if (v != null && v.trim().isNotEmpty) {
+                                final reg = RegExp(r'^[0-9+\-() ]{7,}$');
+                                if (!reg.hasMatch(v.trim())) {
+                                  return 'Invalid phone format';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _guardianNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Guardian / Parent Name',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (_role == 'student' &&
+                                  (v == null || v.trim().isEmpty)) {
+                                return 'Guardian name required';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _sectionController,
+                            decoration: const InputDecoration(
+                              labelText: 'Section / Class',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (_role == 'student' &&
+                                  (v == null || v.trim().isEmpty)) {
+                                return 'Section required';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            decoration: const InputDecoration(
+                              labelText: 'Adviser / Teacher',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: _teachers
+                                .map(
+                                  (t) => DropdownMenuItem<String>(
+                                    value: t['uid'],
+                                    child: Text(t['name'] ?? 'Teacher'),
+                                  ),
+                                )
+                                .toList(),
+                            value: _selectedTeacherUid,
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedTeacherUid = val;
+                                _selectedTeacherName = _teachers.firstWhere(
+                                  (e) => e['uid'] == val,
+                                  orElse: () => {'uid': val ?? '', 'name': ''},
+                                )['name'];
+                              });
+                            },
+                            validator: (v) {
+                              if (_role == 'student' &&
+                                  (v == null || v.isEmpty)) {
+                                return 'Adviser required';
+                              }
+                              return null;
+                            },
+                            hint: _loadingTeachers
+                                ? const Text('Loading teachers...')
+                                : const Text('Select adviser teacher'),
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -697,6 +942,67 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
                                         () => _error = 'ID screenshot required',
                                       );
                                       return;
+                                    }
+                                    if (_role == 'student') {
+                                      if (_parentPhoneController.text
+                                          .trim()
+                                          .isEmpty) {
+                                        setState(
+                                          () =>
+                                              _error = 'Parent phone required',
+                                        );
+                                        return;
+                                      }
+                                      if (_guardianNameController.text
+                                          .trim()
+                                          .isEmpty) {
+                                        setState(
+                                          () =>
+                                              _error = 'Guardian name required',
+                                        );
+                                        return;
+                                      }
+                                      if (_sectionController.text
+                                          .trim()
+                                          .isEmpty) {
+                                        setState(
+                                          () => _error = 'Section required',
+                                        );
+                                        return;
+                                      }
+                                      if (_selectedTeacherUid == null) {
+                                        setState(
+                                          () => _error = 'Adviser required',
+                                        );
+                                        return;
+                                      }
+                                    }
+                                    if (_role == 'teacher') {
+                                      if (_teacherPhoneController.text
+                                          .trim()
+                                          .isEmpty) {
+                                        setState(
+                                          () => _error =
+                                              'Contact number required',
+                                        );
+                                        return;
+                                      }
+                                      if (_teacherSectionController.text
+                                          .trim()
+                                          .isEmpty) {
+                                        setState(
+                                          () => _error = 'Section required',
+                                        );
+                                        return;
+                                      }
+                                      if (_teacherAdviserController.text
+                                          .trim()
+                                          .isEmpty) {
+                                        setState(
+                                          () => _error = 'Adviser required',
+                                        );
+                                        return;
+                                      }
                                     }
                                   }
                                   _submit();

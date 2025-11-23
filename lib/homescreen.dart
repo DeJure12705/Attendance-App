@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:attendanceapp/services/auth_service.dart';
+import 'package:attendanceapp/login_page.dart';
 // Removed unused direct geocoding/geolocator imports; location handled by LocationService
 
 class Homescreen extends StatefulWidget {
@@ -102,7 +103,12 @@ class _HomescreenState extends State<Homescreen> {
               );
               if (confirm == true) {
                 await AuthService().signOut();
-                // StreamBuilder in main.dart will route back to RoleLoginScreen automatically.
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                    (route) => false,
+                  );
+                }
               }
             },
           ),

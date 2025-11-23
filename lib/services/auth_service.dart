@@ -3,11 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class AuthService {
   final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  /// User status values:
+  /// - 'incomplete': Social login user who hasn't completed profile (needs role, studentId)
+  /// - 'pending': Registered user awaiting admin/teacher approval
+  /// - 'approved': Account approved by admin/teacher (can access app)
+  /// - 'rejected': Account rejected by admin/teacher
+  /// - '' (empty): Legacy accounts created before status field (treated as approved)
 
   /// Emits Firebase user only after hydration sets User.role/email/studentId.
   Stream<fb.User?> authStateChanges() {
@@ -46,6 +52,7 @@ class AuthService {
     required String password,
     required String role,
     String? studentId,
+    String? teacherId,
   }) async {
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
@@ -57,12 +64,28 @@ class AuthService {
         'uid': uid,
         'email': email,
         'role': role,
-        'status': 'pending', // requires admin/teacher approval
+        'status': 'incomplete', // proceed to complete profile first
         if (studentId != null && studentId.trim().isNotEmpty)
           'studentId': studentId.trim(),
+        if (teacherId != null && teacherId.trim().isNotEmpty)
+          'teacherId': teacherId.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       };
       await _db.collection('Users').doc(uid).set(data);
+
+      // Manually set User fields immediately for new registration
+      User.uid = uid;
+      User.email = email;
+      User.role = role;
+      User.status = 'incomplete';
+      User.studentId = studentId ?? '';
+      // For teacher we mirror teacherId into studentId field only if needed elsewhere; keep distinct in Firestore
+      if (role == 'teacher' &&
+          teacherId != null &&
+          teacherId.trim().isNotEmpty) {
+        // No separate in-memory field defined; could extend User model later.
+      }
+
       if (role == 'student' &&
           studentId != null &&
           studentId.trim().isNotEmpty) {
@@ -79,9 +102,61 @@ class AuthService {
           });
         }
       }
-      await _hydrateUser(cred.user);
+
+      print('=== USER REGISTERED ===');
+      print('Email: ${User.email}');
+      print('Role: ${User.role}');
+      print('Status: ${User.status}');
+      print('======================');
+
       return null;
     } on fb.FirebaseAuthException catch (e) {
+      // Recovery path: if email already in use, attempt sign-in and create missing Firestore doc / update role.
+      if (e.code == 'email-already-in-use') {
+        try {
+          final loginCred = await _auth.signInWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          final uid = loginCred.user!.uid;
+          final existing = await _db.collection('Users').doc(uid).get();
+          if (!existing.exists) {
+            // Create user doc now with desired role
+            await _db.collection('Users').doc(uid).set({
+              'uid': uid,
+              'email': email,
+              'role': role,
+              'status': 'incomplete',
+              if (studentId != null && studentId.trim().isNotEmpty)
+                'studentId': studentId.trim(),
+              if (teacherId != null && teacherId.trim().isNotEmpty)
+                'teacherId': teacherId.trim(),
+              'createdAt': FieldValue.serverTimestamp(),
+              'recoveredFromEmailInUse': true,
+            });
+          } else {
+            // Update role if different and set status back to pending for approval if changing.
+            final prevRole = existing.data()?['role'] ?? '';
+            if (prevRole != role) {
+              await _db.collection('Users').doc(uid).set({
+                'role': role,
+                'status': 'incomplete',
+                if (teacherId != null && teacherId.trim().isNotEmpty)
+                  'teacherId': teacherId.trim(),
+                if (studentId != null && studentId.trim().isNotEmpty)
+                  'studentId': studentId.trim(),
+                'roleChangedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+            }
+          }
+          await _hydrateUser(loginCred.user);
+          return null; // Treat as success
+        } catch (signErr) {
+          return _mapAuthError(
+            e,
+          ); // Fallback original error message if sign-in fails
+        }
+      }
       return _mapAuthError(e);
     } catch (e) {
       return 'Registration failed';
@@ -89,8 +164,10 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    print('[SIGNOUT] Starting sign-out sequence');
     // Sign out from Firebase
     await _auth.signOut();
+    print('[SIGNOUT] Firebase signOut complete');
 
     // Sign out from Google Sign-In if user was signed in with Google
     try {
@@ -101,14 +178,7 @@ class AuthService {
             .disconnect(); // Fully disconnect to force account picker next time
       }
     } catch (e) {
-      print('Google sign out error: $e');
-    }
-
-    // Sign out from Facebook if user was signed in with Facebook
-    try {
-      await FacebookAuth.instance.logOut();
-    } catch (e) {
-      print('Facebook sign out error: $e');
+      print('[SIGNOUT] Google sign out error: $e');
     }
 
     // Clear user data
@@ -119,6 +189,7 @@ class AuthService {
     User.studentId = ' ';
     User.status = '';
     User.fcmToken = '';
+    print('[SIGNOUT] Local user cache cleared');
   }
 
   Future<void> _hydrateUser(fb.User? fUser) async {
@@ -138,6 +209,13 @@ class AuthService {
       User.status = (data['status'] ?? '').toString();
       User.fcmToken = (data['fcmToken'] ?? '').toString();
       User.providers = List<String>.from(data['providers'] ?? []);
+
+      print('=== USER HYDRATED ===');
+      print('Email: ${User.email}');
+      print('Role: ${User.role}');
+      print('Status: ${User.status}');
+      print('==================');
+
       if (User.role == 'student' && User.studentId.trim().isNotEmpty) {
         // Resolve student Firestore document id for attendance
         try {
@@ -161,7 +239,11 @@ class AuthService {
   }
 
   // --- Social Auth ---
-  Future<String?> signInWithGoogle() async {
+  Future<String?> signInWithGoogle({
+    String? desiredRole, // 'student' or 'teacher'
+    String? studentId,
+    String? teacherId,
+  }) async {
     try {
       if (kIsWeb) {
         // Web: OAuthProvider redirect/popup flow
@@ -174,6 +256,18 @@ class AuthService {
       }
       // Android/iOS: use google_sign_in plugin for more reliable native flow
       final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+
+      // Force sign out and disconnect to show account picker every time
+      try {
+        if (await googleSignIn.isSignedIn()) {
+          await googleSignIn.signOut();
+          await googleSignIn.disconnect();
+        }
+      } catch (e) {
+        // Ignore if already signed out
+        print('Pre-signin cleanup: $e');
+      }
+
       final googleUser = await googleSignIn.signIn();
       if (googleUser == null) return 'Google sign-in canceled';
       final googleAuth = await googleUser.authentication;
@@ -182,7 +276,13 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
       final cred = await _auth.signInWithCredential(credential);
-      await _postSocialLogin(cred.user, provider: 'google');
+      await _postSocialLogin(
+        cred.user,
+        provider: 'google',
+        desiredRole: desiredRole,
+        studentId: studentId,
+        teacherId: teacherId,
+      );
       return null;
     } on fb.FirebaseAuthException catch (e) {
       return _mapAuthError(e);
@@ -191,45 +291,12 @@ class AuthService {
     }
   }
 
-  Future<String?> signInWithFacebook() async {
-    try {
-      if (kIsWeb) {
-        final provider = fb.OAuthProvider('facebook.com')..addScope('email');
-        final cred = await _auth.signInWithProvider(provider);
-        await _postSocialLogin(cred.user, provider: 'facebook');
-        return null;
-      }
-      // Android/iOS native plugin flow
-      final result = await FacebookAuth.instance.login(
-        permissions: ['email', 'public_profile'],
-      );
-      if (result.status != LoginStatus.success) {
-        return 'Facebook sign-in failed (${result.status.name})';
-      }
-      final accessToken = result.accessToken;
-      String? token = accessToken?.tokenString;
-      if (token == null || token.isEmpty) {
-        final map = accessToken?.toJson();
-        final dynamic legacy = map != null ? map['token'] : null;
-        if (legacy is String && legacy.isNotEmpty) token = legacy;
-      }
-      if (token == null || token.isEmpty) {
-        return 'Facebook access token missing';
-      }
-      final credential = fb.FacebookAuthProvider.credential(token);
-      final cred = await _auth.signInWithCredential(credential);
-      await _postSocialLogin(cred.user, provider: 'facebook');
-      return null;
-    } on fb.FirebaseAuthException catch (e) {
-      return _mapAuthError(e);
-    } catch (e) {
-      return 'Facebook login failed';
-    }
-  }
-
   Future<void> _postSocialLogin(
     fb.User? user, {
     required String provider,
+    String? desiredRole,
+    String? studentId,
+    String? teacherId,
   }) async {
     if (user == null) return;
     final ref = _db.collection('Users').doc(user.uid);
@@ -239,12 +306,33 @@ class AuthService {
         'uid': user.uid,
         'email': user.email ?? '',
         'providers': [provider],
-        'status': 'incomplete', // Need role & (studentId if student)
+        'status': 'incomplete', // will complete credentials next
+        if (desiredRole != null) 'role': desiredRole,
+        if (desiredRole == 'student' &&
+            studentId != null &&
+            studentId.trim().isNotEmpty)
+          'studentId': studentId.trim(),
+        if (desiredRole == 'teacher' &&
+            teacherId != null &&
+            teacherId.trim().isNotEmpty)
+          'teacherId': teacherId.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       });
     } else {
       await ref.set({
         'providers': FieldValue.arrayUnion([provider]),
+        // If role not set yet and caller supplies one, set it.
+        if ((snap.data()?['role'] ?? '').toString().isEmpty &&
+            desiredRole != null)
+          'role': desiredRole,
+        if (desiredRole == 'student' &&
+            studentId != null &&
+            studentId.trim().isNotEmpty)
+          'studentId': studentId.trim(),
+        if (desiredRole == 'teacher' &&
+            teacherId != null &&
+            teacherId.trim().isNotEmpty)
+          'teacherId': teacherId.trim(),
       }, SetOptions(merge: true));
     }
     await _hydrateUser(user);
@@ -322,6 +410,41 @@ class AuthService {
     }
   }
 
+  // Request a role change (e.g., student -> teacher). Sets status to pending for approval.
+  Future<String?> requestRoleChange({
+    required String newRole,
+    String? teacherId,
+  }) async {
+    try {
+      final u = _auth.currentUser;
+      if (u == null) return 'Not signed in';
+      if (newRole != 'teacher' && newRole != 'student' && newRole != 'admin') {
+        return 'Invalid role';
+      }
+      final update = <String, dynamic>{
+        'role': newRole,
+        'status': 'pending',
+        if (teacherId != null && teacherId.trim().isNotEmpty)
+          'teacherId': teacherId.trim(),
+        'roleChangedAt': FieldValue.serverTimestamp(),
+      };
+      await _db
+          .collection('Users')
+          .doc(u.uid)
+          .set(update, SetOptions(merge: true));
+      // Hydrate new role/status locally
+      User.role = newRole;
+      User.status = 'pending';
+      if (teacherId != null)
+        User.studentId = teacherId; // Keep existing field mapping minimal
+      return null;
+    } on fb.FirebaseAuthException catch (e) {
+      return _mapAuthError(e);
+    } catch (e) {
+      return 'Role change failed';
+    }
+  }
+
   String _mapAuthError(fb.FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
@@ -329,7 +452,7 @@ class AuthService {
       case 'wrong-password':
         return 'Incorrect password.';
       case 'email-already-in-use':
-        return 'Email already registered.';
+        return 'Email already in use. If you meant to create a teacher account, sign in with this email and (if status is incomplete) finish credentials instead of registering again.';
       case 'invalid-email':
         return 'Invalid email format.';
       case 'weak-password':

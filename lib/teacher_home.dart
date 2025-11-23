@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:attendanceapp/services/auth_service.dart';
+import 'package:attendanceapp/login_page.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:attendanceapp/qr_generator_screen.dart';
 import 'package:attendanceapp/verification_screen.dart';
@@ -39,6 +40,12 @@ class TeacherHome extends StatelessWidget {
               );
               if (confirm == true) {
                 await AuthService().signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                    (route) => false,
+                  );
+                }
               }
             },
           ),

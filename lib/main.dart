@@ -4,9 +4,10 @@ import 'package:attendanceapp/teacher_home.dart';
 import 'package:attendanceapp/services/auth_service.dart';
 import 'package:attendanceapp/services/messaging_service.dart';
 import 'package:attendanceapp/model/user.dart';
-import 'package:attendanceapp/role_login_screen.dart';
+import 'package:attendanceapp/login_page.dart';
 import 'package:attendanceapp/pending_verification_screen.dart';
 import 'package:attendanceapp/complete_credentials_screen.dart';
+import 'package:attendanceapp/loading_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
@@ -62,11 +63,19 @@ class AuthCheck extends StatelessWidget {
         }
         final fbUser = snapshot.data;
         if (fbUser == null) {
-          return const RoleLoginScreen();
+          return const LoginPage();
         }
-        // Route incomplete status BEFORE checking for role (social users have no role yet).
+        // Route incomplete status BEFORE checking for role.
+        // If role is known (from registration), send to role-specific profile screen.
         if (User.status == 'incomplete') {
-          return const CompleteCredentialsScreen();
+          if (User.role == 'student') {
+            return const CompleteCredentialsScreen(forcedRole: 'student');
+          } else if (User.role == 'teacher') {
+            return const CompleteCredentialsScreen(forcedRole: 'teacher');
+          } else {
+            // Social users may not have a role yet; show the chooser
+            return const CompleteCredentialsScreen();
+          }
         }
         // Pending verification screen.
         if (User.status == 'pending') {
@@ -74,16 +83,11 @@ class AuthCheck extends StatelessWidget {
           MessagingService().initialize();
           return const PendingVerificationScreen();
         }
+        // Approved or legacy accounts (empty status) can proceed
+        // Only 'incomplete' and 'pending' should block access
         // Rare race: user doc loaded but role still empty (non-incomplete/pending)
         if (User.role.isEmpty) {
-          return const Scaffold(
-            body: Center(
-              child: Text(
-                'Finalizing sign-in...',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          );
+          return const LoadingScreen();
         }
         switch (User.role) {
           case 'student':
@@ -93,7 +97,7 @@ class AuthCheck extends StatelessWidget {
           case 'admin':
             return const AdminHome();
           default:
-            return const RoleLoginScreen();
+            return const LoginPage();
         }
       },
     );

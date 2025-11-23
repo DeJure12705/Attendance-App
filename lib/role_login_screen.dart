@@ -1,6 +1,13 @@
+import 'package:attendanceapp/loading_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:attendanceapp/services/auth_service.dart';
 import 'package:attendanceapp/model/user.dart';
+import 'package:attendanceapp/complete_credentials_screen.dart';
+import 'package:attendanceapp/pending_verification_screen.dart';
+import 'package:attendanceapp/homescreen.dart';
+import 'package:attendanceapp/teacher_home.dart';
+import 'package:attendanceapp/admin_home.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 
 class RoleLoginScreen extends StatefulWidget {
   const RoleLoginScreen({super.key});
@@ -58,6 +65,50 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
         _loading = false;
         _error = err;
       });
+      if (err == null) {
+        // Proactively navigate after success to leave this screen.
+        final current = fb.FirebaseAuth.instance.currentUser;
+        if (current != null) {
+          await Future.delayed(const Duration(milliseconds: 150));
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const LoadingScreen()),
+            );
+          }
+          Widget? target;
+          if (User.status == 'incomplete') {
+            // Use the selected role on this form to choose the correct screen
+            if (_role == 'student') {
+              target = const CompleteCredentialsScreen(forcedRole: 'student');
+            } else if (_role == 'teacher') {
+              target = const CompleteCredentialsScreen(forcedRole: 'teacher');
+            } else {
+              target = const CompleteCredentialsScreen();
+            }
+          } else if (User.status == 'pending') {
+            target = const PendingVerificationScreen();
+          } else {
+            switch (User.role) {
+              case 'student':
+                target = const Homescreen();
+                break;
+              case 'teacher':
+                target = const TeacherHome();
+                break;
+              case 'admin':
+                target = const AdminHome();
+                break;
+              default:
+                target = null;
+            }
+          }
+          if (target != null && mounted) {
+            Navigator.of(
+              context,
+            ).pushReplacement(MaterialPageRoute(builder: (_) => target!));
+          }
+        }
+      }
     }
   }
 
@@ -66,25 +117,24 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
       _socialLoading = true;
       _error = null;
     });
-    final err = await _auth.signInWithGoogle();
+    final desiredRole = _role; // user-selected role before Google auth
+    final studentId = desiredRole == 'student'
+        ? _studentIdController.text.trim()
+        : null;
+    final err = await _auth.signInWithGoogle(
+      desiredRole: desiredRole,
+      studentId: studentId,
+    );
     if (!mounted) return;
     setState(() {
       _socialLoading = false;
       _error = err;
     });
-  }
-
-  Future<void> _facebookLogin() async {
-    setState(() {
-      _socialLoading = true;
-      _error = null;
-    });
-    final err = await _auth.signInWithFacebook();
-    if (!mounted) return;
-    setState(() {
-      _socialLoading = false;
-      _error = err;
-    });
+    if (err == null && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoadingScreen()),
+      );
+    }
   }
 
   @override
@@ -363,23 +413,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 48,
-                              child: OutlinedButton.icon(
-                                onPressed: _socialLoading
-                                    ? null
-                                    : _facebookLogin,
-                                icon: const Icon(
-                                  Icons.facebook,
-                                  color: Colors.indigo,
-                                ),
-                                label: const Text(
-                                  'Continue with Facebook',
-                                  style: TextStyle(fontFamily: 'NexaBold'),
-                                ),
-                              ),
-                            ),
+
                             if (_socialLoading) ...[
                               const SizedBox(height: 12),
                               const Center(

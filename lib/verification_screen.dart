@@ -4,10 +4,37 @@ import 'package:flutter/material.dart';
 class VerificationScreen extends StatelessWidget {
   const VerificationScreen({super.key});
 
-  Future<void> _updateStatus(String uid, String status) async {
-    await FirebaseFirestore.instance.collection('Users').doc(uid).set({
-      'status': status,
-    }, SetOptions(merge: true));
+  Future<void> _updateStatus(
+    BuildContext context,
+    String uid,
+    String status,
+  ) async {
+    try {
+      await FirebaseFirestore.instance.collection('Users').doc(uid).set({
+        'status': status,
+        'statusUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'User ${status == 'approved' ? 'approved' : 'rejected'}.',
+            ),
+            backgroundColor: status == 'approved' ? Colors.green : Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update status: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
   }
 
   void _showImageDialog(BuildContext context, String imageUrl, String title) {
@@ -325,13 +352,15 @@ class VerificationScreen extends StatelessWidget {
                       Row(
                         children: [
                           ElevatedButton.icon(
-                            onPressed: () => _updateStatus(uid, 'approved'),
+                            onPressed: () =>
+                                _updateStatus(context, uid, 'approved'),
                             icon: const Icon(Icons.check),
                             label: const Text('Approve'),
                           ),
                           const SizedBox(width: 12),
                           OutlinedButton.icon(
-                            onPressed: () => _updateStatus(uid, 'rejected'),
+                            onPressed: () =>
+                                _updateStatus(context, uid, 'rejected'),
                             icon: const Icon(Icons.close),
                             label: const Text('Reject'),
                           ),
