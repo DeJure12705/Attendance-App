@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <!--
+  <head>
+    <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
 
@@ -14,25 +14,93 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="$FLUTTER_BASE_HREF">
+    <base href="$FLUTTER_BASE_HREF" />
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+    <meta charset="UTF-8" />
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+    <meta name="description" content="A new Flutter project." />
 
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="attendanceapp">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    <!-- iOS meta tags & icons -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="attendanceapp" />
+    <link rel="apple-touch-icon" href="icons/Icon-192.png" />
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png" />
 
-  <title>attendanceapp</title>
-  <link rel="manifest" href="manifest.json">
-</head>
-<body>
-  <script src="flutter_bootstrap.js" async></script>
-</body>
+    <title>attendanceapp</title>
+    <link rel="manifest" href="manifest.json" />
+  </head>
+  <body>
+    <!-- Dev helper: unregister service workers and clear caches on localhost to avoid
+         stale cached Firebase scripts during development. Safe to keep — no-op on
+         production hosts because it only runs for localhost/127.0.0.1. -->
+    <script>
+      (function () {
+        try {
+          if (
+            location.hostname === "localhost" ||
+            location.hostname === "127.0.0.1"
+          ) {
+            if ("serviceWorker" in navigator) {
+              navigator.serviceWorker
+                .getRegistrations()
+                .then(function (regs) {
+                  for (var r of regs) {
+                    try {
+                      r.unregister();
+                    } catch (_) {}
+                  }
+                })
+                .catch(function (_) {});
+            }
+            if (window.caches && caches.keys) {
+              caches
+                .keys()
+                .then(function (keys) {
+                  keys.forEach(function (key) {
+                    try {
+                      caches.delete(key);
+                    } catch (_) {}
+                  });
+                })
+                .catch(function (_) {});
+            }
+          }
+        } catch (e) {
+          // swallow errors in this dev helper
+          console.warn("SW-clean helper error", e);
+        }
+      })();
+    </script>
+    <script src="flutter_bootstrap.js" async></script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+      import {
+        initializeAppCheck,
+        ReCaptchaV3Provider,
+      } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app-check.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCuTg6Yagjr_Ro5pigYHf95xMcbslFpiW8",
+        authDomain: "attendance-app-abd13.firebaseapp.com",
+        projectId: "attendance-app-abd13",
+        storageBucket: "attendance-app-abd13.firebasestorage.app",
+        messagingSenderId: "237655157264",
+        appId: "1:237655157264:web:0a221ef16e8485698f7895",
+        measurementId: "G-6ZEY9RH9EE",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      console.log("Firebase app initialized via JS.");
+      self.appCheckTokenDeferred = initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(
+          "6LcVExwsAAAAAOcihH7EHBirIzik-jUH86CuE4wi"
+        ),
+        isTokenAutoRefreshEnabled: true,
+      });
+      console.log("App Check initialized with reCAPTCHA v3.");
+    </script>
+  </body>
 </html>

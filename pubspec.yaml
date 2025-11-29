@@ -56,12 +56,12 @@ dependencies:
   firebase_messaging: ^16.0.4
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
-  # Downgraded for Android plugin API (supports GoogleSignIn() constructor + signIn method)
   google_sign_in: 6.2.1
   firebase_app_check: ^0.4.1+2
   google_maps_flutter: ^2.14.0
   web_socket_channel: ^3.0.3
   flutter_launcher_icons: ^0.14.4
+  recaptcha_v3: ^0.2.0
 
 dev_dependencies:
   flutter_test:
@@ -70,9 +70,9 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/icons/attendance_app_icon.png"
-  adaptive_icon_background: "#BDF6FE"
-  adaptive_icon_foreground: "#ffe4e1"
+  image_path: "assets/icons/atan.png"
+  adaptive_icon_background: "assets/icons/background.jpg"
+  adaptive_icon_foreground: "assets/icons/foreground.jpg"
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -94,6 +94,7 @@ flutter:
   assets:
     - assets/pics/google.png
     - assets/pics/qrAttendance.jpg
+    - assets/icons/atan.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

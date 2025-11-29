@@ -246,11 +246,11 @@ class AuthService {
   }) async {
     try {
       if (kIsWeb) {
-        // Web: OAuthProvider redirect/popup flow
-        final provider = fb.OAuthProvider('google.com')
+        // Web: GoogleAuthProvider with popup flow
+        final provider = fb.GoogleAuthProvider()
           ..addScope('email')
           ..addScope('profile');
-        final cred = await _auth.signInWithProvider(provider);
+        final cred = await _auth.signInWithPopup(provider);
         await _postSocialLogin(cred.user, provider: 'google');
         return null;
       }
@@ -285,8 +285,10 @@ class AuthService {
       );
       return null;
     } on fb.FirebaseAuthException catch (e) {
+      print('Google login FirebaseAuthException: ${e.code} - ${e.message}');
       return _mapAuthError(e);
     } catch (e) {
+      print('Google login failed: $e');
       return 'Google login failed';
     }
   }

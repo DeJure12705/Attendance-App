@@ -37,6 +37,13 @@
             {
               "client_id": "237655157264-tnl7ba9m88o6a243t46mfncouk00jig5.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "237655157264-fgpbcjvoacoln844tv6ee9rbn4f8mq2h.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.attendanceapp"
+              }
             }
           ]
         }
