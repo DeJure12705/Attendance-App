@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:attendanceapp/services/auth_service.dart';
 import 'package:attendanceapp/login_page.dart';
 import 'package:attendanceapp/model/user.dart';
-import 'package:attendanceapp/qr_generator_screen.dart';
 import 'package:attendanceapp/verification_screen.dart';
+import 'package:attendanceapp/unified_event_screen.dart';
 
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
@@ -50,20 +50,11 @@ class AdminHome extends StatelessWidget {
             },
           ),
           IconButton(
-            tooltip: 'QR Generator',
-            icon: const Icon(Icons.qr_code_2),
+            tooltip: 'Manage Events',
+            icon: const Icon(Icons.event),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const QrGeneratorScreen()),
-              );
-            },
-          ),
-          IconButton(
-            tooltip: 'Verify Accounts',
-            icon: const Icon(Icons.verified_user),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const VerificationScreen()),
+                MaterialPageRoute(builder: (_) => const UnifiedEventScreen()),
               );
             },
           ),
@@ -84,11 +75,20 @@ class AdminHome extends StatelessWidget {
               style: const TextStyle(fontFamily: 'NexaRegular'),
             ),
             const SizedBox(height: 24),
-            // Admin actions placeholder; logout moved to AppBar.
-            const SizedBox(height: 24),
-            const Text(
-              'TODO: Implement admin tools (manage users, reports).',
-              style: TextStyle(fontFamily: 'NexaRegular'),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const VerificationScreen()),
+                );
+              },
+              icon: const Icon(Icons.verified_user),
+              label: const Text('Verify Accounts'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
             ),
           ],
         ),
