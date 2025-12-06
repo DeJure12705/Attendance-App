@@ -5,6 +5,7 @@ import 'package:attendanceapp/model/user.dart';
 import 'package:attendanceapp/verification_screen.dart';
 import 'package:attendanceapp/unified_event_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class TeacherHome extends StatefulWidget {
   const TeacherHome({super.key});
@@ -105,14 +106,63 @@ class _TeacherHomeState extends State<TeacherHome> {
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              _loadingName
-                  ? 'Welcome Teacher'
-                  : 'Welcome ${_teacherName ?? 'Teacher'}',
-              style: const TextStyle(fontFamily: 'NexaBold', fontSize: 24),
+            // Header with welcome and date/time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome',
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontFamily: 'NexaRegular',
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _loadingName ? 'Teacher' : (_teacherName ?? 'Teacher'),
+                      style: const TextStyle(
+                        fontFamily: 'NexaBold',
+                        fontSize: 24,
+                      ),
+                    ),
+                  ],
+                ),
+                // Date & Time
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      DateFormat('dd MMM yyyy').format(DateTime.now()),
+                      style: TextStyle(
+                        fontFamily: 'NexaRegular',
+                        color: Colors.black54,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    StreamBuilder(
+                      stream: Stream.periodic(const Duration(seconds: 1)),
+                      builder: (context, snapshot) {
+                        return Text(
+                          DateFormat('hh:mm:ss a').format(DateTime.now()),
+                          style: TextStyle(
+                            fontFamily: 'NexaRegular',
+                            color: Colors.black54,
+                            fontSize: 13,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
+
             const SizedBox(height: 12),
             Text(
               'Email: ${User.email}',
