@@ -455,8 +455,9 @@ class AuthService {
       // Hydrate new role/status locally
       User.role = newRole;
       User.status = 'pending';
-      if (teacherId != null)
+      if (teacherId != null) {
         User.studentId = teacherId; // Keep existing field mapping minimal
+      }
       return null;
     } on fb.FirebaseAuthException catch (e) {
       return _mapAuthError(e);

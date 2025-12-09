@@ -9,6 +9,9 @@ import 'package:attendanceapp/teacher_home.dart';
 import 'package:attendanceapp/admin_home.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 
+// Unified role-based login/register screen.
+// Lets users pick Student/Teacher role, login or register, and supports Google auth.
+// After success, navigates based on `User.status` and `User.role`.
 class RoleLoginScreen extends StatefulWidget {
   const RoleLoginScreen({super.key});
   @override
@@ -38,6 +41,8 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
     super.dispose();
   }
 
+  // Validate inputs and either sign in or register, depending on `_mode`.
+  // Proactively shows a loading screen and routes after success.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -112,6 +117,8 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
     }
   }
 
+  // Google sign-in honors the selected role and optional Student ID.
+  // Shows loading and then relies on auth state to route.
   Future<void> _googleLogin() async {
     setState(() {
       _socialLoading = true;
@@ -173,6 +180,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 28,
+                    // Header
                     vertical: 32,
                   ),
                   child: Form(
@@ -192,6 +200,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                         Text(
                           'Attendance App',
                           style: TextStyle(
+                            // Mode toggle (login/register)
                             fontFamily: 'NexaRegular',
                             fontSize: 14,
                             color: Colors.grey[700],
@@ -225,6 +234,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                                 vertical: 10,
                               ),
                               child: Text(
+                                // Role picker (Student/Teacher)
                                 'Register',
                                 style: TextStyle(fontFamily: 'NexaBold'),
                               ),
@@ -244,6 +254,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                             ),
                           ],
                           selected: {_role},
+                          // Email
                           onSelectionChanged: (s) =>
                               setState(() => _role = s.first),
                           style: const ButtonStyle(
@@ -261,6 +272,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return 'Email required';
+                              // Password with show/hide
                             }
                             final reg = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
                             if (!reg.hasMatch(v.trim())) return 'Invalid email';
@@ -289,6 +301,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                           obscureText: !_showPassword,
                           validator: (v) {
                             if (v == null || v.length < 6) {
+                              // Student ID when role is Student
                               return 'Min 6 characters';
                             }
                             return null;
@@ -305,6 +318,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                             validator: (v) {
                               if (_role == 'student' &&
                                   (v == null || v.trim().isEmpty)) {
+                                // Animated error banner
                                 return 'Student ID required';
                               }
                               return null;
@@ -345,6 +359,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                                         icon: const Icon(
                                           Icons.close,
                                           size: 18,
+                                          // Primary submit button
                                           color: Colors.red,
                                         ),
                                       ),
@@ -374,6 +389,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                                 : Text(
                                     _mode == 'login' ? 'Login' : 'Register',
                                     style: const TextStyle(
+                                      // Quick switch between modes
                                       fontFamily: 'NexaBold',
                                       fontSize: 16,
                                     ),
@@ -389,6 +405,7 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                           child: Text(
                             _mode == 'login'
                                 ? 'Need an account? Register'
+                                // Google sign-in + helper text
                                 : 'Have an account? Login',
                             style: const TextStyle(fontFamily: 'NexaRegular'),
                           ),

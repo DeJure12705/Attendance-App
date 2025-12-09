@@ -14,6 +14,8 @@ import 'package:attendanceapp/services/location_service.dart';
 // Token classification moved to top-level (enums cannot be inside classes)
 enum _ScanType { checkIn, checkOut, dynamicToken, event, unknown }
 
+// Student attendance screen with QR flows and geofence validation.
+// Shows live date/time, check-in/out status, address, and map markers.
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
   @override
@@ -24,6 +26,7 @@ class _TodayScreenState extends State<TodayScreen> {
   double screenHeight = 0;
   double screenWidth = 0;
   final Color primary = const Color.fromARGB(252, 47, 145, 42);
+  // Header name derived from `User.studentId` or SharedPreferences.
   String? _username;
   String checkIn = "--/--";
   String checkOut = "--/--";
@@ -35,6 +38,8 @@ class _TodayScreenState extends State<TodayScreen> {
   // FlutterMap does not need a controller for simple markers.
 
   // Classify scanned token to enforce correct sequence
+  // Interpret a scanned token and decide the expected action.
+  // Supports CHECKIN:, CHECKOUT:, DYN:, EVENT: prefixes; defaults to unknown.
   _ScanType _classifyToken(String token) {
     final t = token.trim().toUpperCase();
     if (t.startsWith('CHECKIN:')) return _ScanType.checkIn;
@@ -44,6 +49,7 @@ class _TodayScreenState extends State<TodayScreen> {
     return _ScanType.unknown;
   }
 
+  // Extract eventId from tokens like EVENT:<id> (or return null).
   String? _extractEventId(String token) {
     final parts = token.split(':');
     if (parts.length >= 2) {
@@ -52,6 +58,8 @@ class _TodayScreenState extends State<TodayScreen> {
     return null;
   }
 
+  // Validate current coordinates against an event geofence.
+  // Returns null if valid; otherwise a user-friendly error string.
   Future<String?> _validateLocationForEvent(String eventId) async {
     if (eventId == 'NONE') return null; // no validation
     final eventSnap = await FirebaseFirestore.instance
@@ -84,8 +92,9 @@ class _TodayScreenState extends State<TodayScreen> {
     if (!initialized) return 'Unable to access location services';
     final userLat = await locService.getLatitude();
     final userLng = await locService.getLongitude();
-    if (userLat == null || userLng == null)
+    if (userLat == null || userLng == null) {
       return 'Unable to get your location';
+    }
 
     // Update User static vars for consistency
     User.lat = userLat;
@@ -108,11 +117,13 @@ class _TodayScreenState extends State<TodayScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize header, load today's record, then resolve address.
     _loadUsername();
     _getRecord();
     _waitForCoordinates();
   }
 
+  // Reverse-geocode `User.lat/long` into a readable address.
   void _getLocation() async {
     if (User.lat == 0.0 || User.long == 0.0) return;
     try {
@@ -133,6 +144,8 @@ class _TodayScreenState extends State<TodayScreen> {
     } catch (_) {}
   }
 
+  // Poll for coordinates to be set; when present, fetch address.
+  // After several attempts, fall back to "Location unavailable".
   void _waitForCoordinates() {
     if (User.lat != 0.0 && User.long != 0.0) {
       _getLocation();
@@ -158,6 +171,7 @@ class _TodayScreenState extends State<TodayScreen> {
     });
   }
 
+  // Hydrate `_username` from memory or SharedPreferences.
   Future<void> _loadUsername() async {
     if (User.studentId.trim().isNotEmpty) {
       setState(() => _username = User.studentId.trim());
@@ -171,6 +185,7 @@ class _TodayScreenState extends State<TodayScreen> {
     });
   }
 
+  // Load today's attendance record from Firestore and populate UI fields.
   Future<void> _getRecord() async {
     final dateId = DateFormat('dd MMMM yyyy').format(DateTime.now());
     try {
@@ -234,6 +249,7 @@ class _TodayScreenState extends State<TodayScreen> {
     }
   }
 
+  // Request permissions and capture a high-accuracy position.
   Future<Position?> _capturePrecisePosition() async {
     try {
       LocationPermission perm = await Geolocator.checkPermission();
@@ -288,7 +304,7 @@ class _TodayScreenState extends State<TodayScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
+              // Header: welcome + live date/time
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -328,6 +344,7 @@ class _TodayScreenState extends State<TodayScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
+                      // Live clock updated every second
                       StreamBuilder(
                         stream: Stream.periodic(const Duration(seconds: 1)),
                         builder: (context, snapshot) {
@@ -348,7 +365,7 @@ class _TodayScreenState extends State<TodayScreen> {
 
               const SizedBox(height: 20),
 
-              // Status card
+              // Status card: shows current check-in and check-out times
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -450,7 +467,7 @@ class _TodayScreenState extends State<TodayScreen> {
 
               const SizedBox(height: 18),
 
-              // Location chip
+              // Location chip: reverse-geocoded address for current coordinates
               Row(
                 children: [
                   const Icon(
@@ -474,6 +491,7 @@ class _TodayScreenState extends State<TodayScreen> {
               ),
 
               const SizedBox(height: 14),
+              // Map: show markers for check-in/out coordinates when available
               if (checkInLat != null || checkOutLat != null)
                 SizedBox(
                   height: 220,
@@ -524,7 +542,8 @@ class _TodayScreenState extends State<TodayScreen> {
 
               const SizedBox(height: 26),
 
-              // Scan CTA
+              // Scan CTA: triggers QR scan and handles sequential CHECKIN then CHECKOUT,
+              // including event geofence validation and Firestore persistence.
               Center(
                 child: SizedBox(
                   width: double.infinity,
@@ -560,6 +579,7 @@ class _TodayScreenState extends State<TodayScreen> {
                             );
                             if (!mounted) return;
                             if (code == null) return;
+                            // Classify token intent and capture precise coordinates.
                             final scanType = _classifyToken(code);
                             final position = await _capturePrecisePosition();
                             if (!mounted) return;
@@ -753,6 +773,7 @@ class _TodayScreenState extends State<TodayScreen> {
                                 );
                               }
                               if (!mounted) return;
+                              // Refresh UI to reflect latest record and markers
                               _getRecord();
                               _refreshMapSymbols();
                             } catch (e) {
@@ -817,7 +838,7 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 }
 
-// QR scan screen widget
+// QR scanner page implemented with mobile_scanner; returns scanned value.
 class _QrScanScreen extends StatefulWidget {
   final Color primary;
   const _QrScanScreen({required this.primary});
@@ -848,6 +869,7 @@ class _QrScanScreenState extends State<_QrScanScreen> {
               if (barcodes.isEmpty) return;
               final raw = barcodes.first.rawValue;
               if (raw == null || raw.trim().isEmpty) return;
+              // Prevent multiple pops; return the trimmed QR payload.
               _done = true;
               Navigator.pop(context, raw.trim());
             },

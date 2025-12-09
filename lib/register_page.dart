@@ -10,6 +10,9 @@ import 'package:attendanceapp/admin_home.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 
+// Registration page for email/password with role selection.
+// Supports student-specific Student ID, Google sign-in, and routes based
+// on user status (incomplete, pending, approved) after account creation.
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
   @override
@@ -41,6 +44,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  // Validate fields, create account, then navigate based on role/status.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -118,6 +122,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  // Help users when email is already registered: offer sign-in or teacher conversion.
   void _showEmailInUseDialog(String email, String password) {
     showDialog(
       context: context,
@@ -194,6 +199,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  // Google sign-in with pre-selected role and optional Student ID.
   Future<void> _googleLogin() async {
     setState(() {
       _socialLoading = true;
@@ -245,6 +251,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // Header
                           const Text(
                             'Create Account',
                             style: TextStyle(
@@ -264,7 +271,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 32),
-                          // Role Selector
+                          // Role Selector (student or teacher)
                           const Text(
                             'I am a:',
                             style: TextStyle(
@@ -291,6 +298,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 setState(() => _role = s.first),
                           ),
                           const SizedBox(height: 24),
+                          // Email
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
@@ -309,6 +317,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           if (_role == 'student') ...[
                             const SizedBox(height: 16),
+                            // Student ID (only for students)
                             TextFormField(
                               controller: _studentIdController,
                               decoration: InputDecoration(
@@ -329,6 +338,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ],
                           const SizedBox(height: 16),
+                          // Password
                           TextFormField(
                             controller: _passwordController,
                             obscureText: !_showPassword,
@@ -357,6 +367,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             },
                           ),
                           const SizedBox(height: 16),
+                          // Confirm password
                           TextFormField(
                             controller: _confirmPasswordController,
                             obscureText: !_showConfirmPassword,
@@ -386,6 +397,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               return null;
                             },
                           ),
+                          // Error banner
                           if (_error != null) ...[
                             const SizedBox(height: 12),
                             Container(
@@ -405,6 +417,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ],
                           const SizedBox(height: 24),
+                          // Create account button
                           SizedBox(
                             height: 54,
                             child: ElevatedButton(
@@ -435,6 +448,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ),
                           const SizedBox(height: 24),
+                          // Divider + Social login
                           Row(
                             children: [
                               Expanded(child: Divider(color: Colors.grey[300])),
@@ -469,6 +483,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
+                          // Link to sign-in
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
