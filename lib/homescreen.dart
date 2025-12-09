@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:attendanceapp/services/auth_service.dart';
 import 'package:attendanceapp/login_page.dart';
-// Removed unused direct geocoding/geolocator imports; location handled by LocationService
 
 class Homescreen extends StatefulWidget {
   const Homescreen({super.key});

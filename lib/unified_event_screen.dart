@@ -336,8 +336,8 @@ class _UnifiedEventScreenState extends State<UnifiedEventScreen> {
       appBar: AppBar(title: const Text('Event Management')),
       floatingActionButton: FloatingActionButton(
         onPressed: _createEvent,
-        child: const Icon(Icons.add),
         tooltip: 'Create Event',
+        child: const Icon(Icons.add),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _db
