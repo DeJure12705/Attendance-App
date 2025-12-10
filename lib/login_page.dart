@@ -10,6 +10,9 @@ import 'package:attendanceapp/admin_home.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 
+// Email/password login page.
+// Handles credential sign-in, Google sign-in, shows validation errors,
+// and navigates to the appropriate next screen via AuthService state.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
   @override
@@ -35,6 +38,8 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  // Validate form and perform email/password sign-in.
+  // On success, we show a loading screen and let the auth stream route.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -65,6 +70,8 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // Kick off Google sign-in and route based on role/status.
+  // Pushes a loading screen while AuthService completes.
   Future<void> _googleLogin() async {
     setState(() {
       _socialLoading = true;
@@ -155,6 +162,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // Header
                           const Text(
                             'Welcome Back',
                             style: TextStyle(
@@ -174,6 +182,7 @@ class _LoginPageState extends State<LoginPage> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 32),
+                          // Email field
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
@@ -191,6 +200,7 @@ class _LoginPageState extends State<LoginPage> {
                             },
                           ),
                           const SizedBox(height: 16),
+                          // Password field with show/hide toggle
                           TextFormField(
                             controller: _passwordController,
                             obscureText: !_showPassword,
@@ -217,6 +227,7 @@ class _LoginPageState extends State<LoginPage> {
                               return null;
                             },
                           ),
+                          // Error banner
                           if (_error != null) ...[
                             const SizedBox(height: 12),
                             Container(
@@ -236,6 +247,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ],
                           const SizedBox(height: 24),
+                          // Submit button
                           SizedBox(
                             height: 54,
                             child: ElevatedButton(
@@ -266,6 +278,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                           const SizedBox(height: 24),
+                          // Divider + Social login
                           Row(
                             children: [
                               Expanded(child: Divider(color: Colors.grey[300])),
@@ -300,6 +313,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
+                          // Link to registration
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [

@@ -12,6 +12,7 @@
 /// 9. Under "Folder" you can set default folder or leave blank
 /// 10. Save and copy the preset name
 /// 11. Replace the values below with your credentials
+library;
 
 class CloudinaryConfig {
   // Replace with your Cloudinary cloud name from dashboard

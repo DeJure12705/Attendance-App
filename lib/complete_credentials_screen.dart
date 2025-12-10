@@ -11,6 +11,9 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:async';
 
+// Complete profile screen for newly registered or social sign-in users.
+// Collects role-specific fields, uploads profile/ID images to Cloudinary,
+// and saves additional user data to Firestore, then routes to pending screen.
 class CompleteCredentialsScreen extends StatefulWidget {
   final String? forcedRole; // 'student' or 'teacher' to lock the role
   const CompleteCredentialsScreen({super.key, this.forcedRole});
@@ -93,6 +96,12 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
     super.dispose();
   }
 
+  // Main submit handler:
+  // - Validates form
+  // - Uploads images to Cloudinary
+  // - Calls AuthService.completeCredentials
+  // - Persists additional fields (name/address/etc.) in Firestore
+  // - Navigates to PendingVerificationScreen on success
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -134,6 +143,7 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
         cache: CloudinaryConfig.cache,
       );
 
+      // Helper: upload a picked image to Cloudinary, returning the secure URL.
       Future<String?> uploadToCloudinary(XFile xfile, String folder) async {
         final file = File(xfile.path);
         if (!file.existsSync()) throw Exception('Local file missing ($folder)');
@@ -303,6 +313,7 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
     });
   }
 
+  // Show native date picker and store birth date.
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
     final initial = DateTime(now.year - 18, now.month, now.day);
@@ -319,6 +330,7 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
     }
   }
 
+  // Pick an image for profile or ID, validate size, and store in state.
   Future<void> _pickImage(bool isProfile) async {
     // Show options: Camera or Gallery
     final source = await showDialog<ImageSource>(
@@ -453,6 +465,7 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Header
                       const Text(
                         'Complete Profile',
                         style: TextStyle(fontFamily: 'NexaBold', fontSize: 26),
@@ -463,6 +476,7 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
                         style: const TextStyle(fontFamily: 'NexaRegular'),
                       ),
                       const SizedBox(height: 20),
+                      // Role selection (hidden if forced by caller)
                       if (widget.forcedRole == null)
                         SegmentedButton<String>(
                           segments: const [
@@ -485,6 +499,7 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
                         ),
                       if (_role == 'student' || _role == 'teacher') ...[
                         const SizedBox(height: 20),
+                        // ID field: Student ID or Teacher ID
                         TextFormField(
                           controller: _idController,
                           decoration: InputDecoration(
