@@ -785,42 +785,6 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
                           DropdownButtonFormField<String>(
                             isExpanded: true,
                             decoration: const InputDecoration(
-                              labelText: 'Section / Class',
-                              border: OutlineInputBorder(),
-                            ),
-                            value: _selectedTeacherAdvisory,
-                            items:
-                                (_selectedTeacherAdvisory != null &&
-                                    _selectedTeacherAdvisory!.isNotEmpty)
-                                ? [
-                                    DropdownMenuItem<String>(
-                                      value: _selectedTeacherAdvisory,
-                                      child: Text(_selectedTeacherAdvisory!),
-                                    ),
-                                  ]
-                                : <DropdownMenuItem<String>>[],
-                            onChanged: (val) {
-                              setState(() {
-                                _selectedTeacherAdvisory = val;
-                                _sectionController.text = val ?? '';
-                              });
-                            },
-                            validator: (v) {
-                              if (_role == 'student' &&
-                                  (_selectedTeacherAdvisory == null ||
-                                      _selectedTeacherAdvisory!
-                                          .trim()
-                                          .isEmpty)) {
-                                return 'Section required (choose adviser with advisory)';
-                              }
-                              return null;
-                            },
-                            hint: const Text('Select adviser to load section'),
-                          ),
-                          const SizedBox(height: 16),
-                          DropdownButtonFormField<String>(
-                            isExpanded: true,
-                            decoration: const InputDecoration(
                               labelText: 'Adviser / Teacher',
                               border: OutlineInputBorder(),
                             ),
@@ -867,6 +831,42 @@ class _CompleteCredentialsScreenState extends State<CompleteCredentialsScreen> {
                             hint: _loadingTeachers
                                 ? const Text('Loading teachers...')
                                 : const Text('Select adviser teacher'),
+                          ),
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Section / Class',
+                              border: OutlineInputBorder(),
+                            ),
+                            initialValue: _selectedTeacherAdvisory,
+                            items:
+                                (_selectedTeacherAdvisory != null &&
+                                    _selectedTeacherAdvisory!.isNotEmpty)
+                                ? [
+                                    DropdownMenuItem<String>(
+                                      value: _selectedTeacherAdvisory,
+                                      child: Text(_selectedTeacherAdvisory!),
+                                    ),
+                                  ]
+                                : <DropdownMenuItem<String>>[],
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedTeacherAdvisory = val;
+                                _sectionController.text = val ?? '';
+                              });
+                            },
+                            validator: (v) {
+                              if (_role == 'student' &&
+                                  (_selectedTeacherAdvisory == null ||
+                                      _selectedTeacherAdvisory!
+                                          .trim()
+                                          .isEmpty)) {
+                                return 'Section required (choose adviser with advisory)';
+                              }
+                              return null;
+                            },
+                            hint: const Text('Select adviser to load section'),
                           ),
                         ],
                         const SizedBox(height: 16),
