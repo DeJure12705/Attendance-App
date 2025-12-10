@@ -144,211 +144,224 @@ class _AdminHomeState extends State<AdminHome> {
   }
 
   Widget _buildDashboard(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    int crossAxisCount;
-    double childAspectRatio;
-    double sidePadding;
-
-    if (screenWidth > 1100) {
-      crossAxisCount = 4;
-      childAspectRatio = 1.5;
-      sidePadding = 30.0;
-    } else if (screenWidth > 600) {
-      crossAxisCount = 3;
-      childAspectRatio = 1.3;
-      sidePadding = 24.0;
-    } else {
-      crossAxisCount = 2;
-      childAspectRatio = 1.45;
-      sidePadding = 16.0;
-    }
-
     String dateStr = DateFormat('MMMM d, yyyy').format(DateTime.now());
 
     if (_isLoading) {
       return Center(child: CircularProgressIndicator(color: colSuccess));
     }
 
-    return RefreshIndicator(
-      color: colSuccess,
-      onRefresh: _fetchStats,
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: true,
-            pinned: true,
-            expandedHeight: 80.0,
-            backgroundColor: colSuccess,
-            elevation: 1,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: EdgeInsets.only(left: sidePadding, bottom: 16),
-              title: const Text(
-                'Admin Dashboard',
-                style: TextStyle(
-                  fontFamily: 'NexaBold',
-                  color: Colors.white,
-                  fontSize: 22,
-                ),
-              ),
-            ),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
 
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(sidePadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    dateStr.toUpperCase(),
-                    style: const TextStyle(
+        // --- RESPONSIVE LOGIC ---
+        int crossAxisCount;
+        double childAspectRatio;
+        double sidePadding;
+
+        if (screenWidth > 1100) {
+          // PC
+          crossAxisCount = 4;
+          childAspectRatio = 1.4;
+          sidePadding = 30.0;
+        } else if (screenWidth > 600) {
+          // Tablet
+          crossAxisCount = 3;
+          childAspectRatio = 1.2;
+          sidePadding = 24.0;
+        } else {
+          // Mobile (Poco X7 Pro, etc.)
+          crossAxisCount = 2;
+          // TALLER ASPECT RATIO to prevent overflow
+          childAspectRatio = 0.95;
+          sidePadding = 16.0;
+        }
+
+        return RefreshIndicator(
+          color: colSuccess,
+          onRefresh: _fetchStats,
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                pinned: true,
+                expandedHeight: 80.0,
+                backgroundColor: colSuccess,
+                elevation: 1,
+                flexibleSpace: FlexibleSpaceBar(
+                  titlePadding: EdgeInsets.only(left: sidePadding, bottom: 16),
+                  title: const Text(
+                    'Admin Dashboard',
+                    style: TextStyle(
                       fontFamily: 'NexaBold',
-                      fontSize: 12,
-                      color: Colors.grey,
-                      letterSpacing: 1.0,
+                      color: Colors.white,
+                      fontSize: 22,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  RichText(
-                    text: const TextSpan(
-                      style: TextStyle(
-                        fontFamily: 'NexaRegular',
-                        fontSize: 24,
-                        color: Color(0xFF2D3436),
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(sidePadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        dateStr.toUpperCase(),
+                        style: const TextStyle(
+                          fontFamily: 'NexaBold',
+                          fontSize: 12,
+                          color: Colors.grey,
+                          letterSpacing: 1.0,
+                        ),
                       ),
-                      children: [
-                        TextSpan(text: 'Hello, '),
-                        TextSpan(
-                          text: 'Admin',
-                          style: TextStyle(fontFamily: 'NexaBold'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 130,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(
-                  horizontal: sidePadding,
-                  vertical: 10,
-                ),
-                children: [
-                  _QuickActionChip(
-                    label: 'Verify\nAccounts',
-                    icon: Icons.verified_user,
-                    color: colTeal,
-                    badgeCount: _pendingVerifications,
-                    onTap: () => Navigator.of(context)
-                        .push(
-                          MaterialPageRoute(
-                            builder: (_) => const VerificationScreen(
-                              onlyStudents: false, // Admin sees all users
-                              userRole: 'admin', // Admin has full control
+                      const SizedBox(height: 8),
+                      RichText(
+                        text: const TextSpan(
+                          style: TextStyle(
+                            fontFamily: 'NexaRegular',
+                            fontSize: 24,
+                            color: Color(0xFF2D3436),
+                          ),
+                          children: [
+                            TextSpan(text: 'Hello, '),
+                            TextSpan(
+                              text: 'Admin',
+                              style: TextStyle(fontFamily: 'NexaBold'),
                             ),
-                          ),
-                        )
-                        .then((_) => _fetchStats()),
-                  ),
-                  const SizedBox(width: 12),
-                  _QuickActionChip(
-                    label: 'Manage\nEvents',
-                    icon: Icons.event,
-                    color: colPurple,
-                    onTap: () => Navigator.of(context)
-                        .push(
-                          MaterialPageRoute(
-                            builder: (_) => const UnifiedEventScreen(),
-                          ),
-                        )
-                        .then((_) => _fetchStats()),
-                  ),
-                  const SizedBox(width: 12),
-                  _QuickActionChip(
-                    label: 'App\nSettings',
-                    icon: Icons.settings,
-                    color: colDark,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          SliverPadding(
-            padding: EdgeInsets.all(sidePadding),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: childAspectRatio,
-              ),
-              delegate: SliverChildListDelegate([
-                _TransparentStatCard(
-                  title: 'Total Users',
-                  count: _totalUsers,
-                  icon: Icons.people_alt,
-                  themeColor: colPurple,
-                ),
-                _TransparentStatCard(
-                  title: 'Students',
-                  count: _totalStudents,
-                  icon: Icons.school,
-                  themeColor: colBlue,
-                ),
-                _TransparentStatCard(
-                  title: 'Teachers',
-                  count: _totalTeachers,
-                  icon: Icons.person_pin,
-                  themeColor: colDark,
-                ),
-                _TransparentStatCard(
-                  title: 'Total Events',
-                  count: _totalEvents,
-                  icon: Icons.event_available,
-                  themeColor: colPurple,
-                  onSeeAll: () => Navigator.of(context)
-                      .push(
-                        MaterialPageRoute(
-                          builder: (_) => const UnifiedEventScreen(),
+                          ],
                         ),
-                      )
-                      .then((_) => _fetchStats()),
+                      ),
+                    ],
+                  ),
                 ),
-                _TransparentStatCard(
-                  title: 'Pending',
-                  count: _pendingVerifications,
-                  icon: Icons.hourglass_top,
-                  themeColor: colTeal,
-                  isAlert: _pendingVerifications > 0,
+              ),
+
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 130,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: sidePadding,
+                      vertical: 10,
+                    ),
+                    children: [
+                      _QuickActionChip(
+                        label: 'Verify\nAccounts',
+                        icon: Icons.verified_user,
+                        color: colTeal,
+                        badgeCount: _pendingVerifications,
+                        onTap: () => Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) => const VerificationScreen(
+                                  onlyStudents: false, // Admin sees all users
+                                  userRole: 'admin', // Admin has full control
+                                ),
+                              ),
+                            )
+                            .then((_) => _fetchStats()),
+                      ),
+                      const SizedBox(width: 12),
+                      _QuickActionChip(
+                        label: 'Manage\nEvents',
+                        icon: Icons.event,
+                        color: colPurple,
+                        onTap: () => Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) => const UnifiedEventScreen(),
+                              ),
+                            )
+                            .then((_) => _fetchStats()),
+                      ),
+                      const SizedBox(width: 12),
+                      _QuickActionChip(
+                        label: 'App\nSettings',
+                        icon: Icons.settings,
+                        color: colDark,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                _TransparentStatCard(
-                  title: 'Active QRs',
-                  count: _activeQrCodes,
-                  icon: Icons.qr_code_2,
-                  themeColor: colBlue,
+              ),
+
+              SliverPadding(
+                padding: EdgeInsets.all(sidePadding),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: childAspectRatio,
+                  ),
+                  delegate: SliverChildListDelegate([
+                    _TransparentStatCard(
+                      title: 'Total Users',
+                      count: _totalUsers,
+                      icon: Icons.people_alt,
+                      themeColor: colPurple,
+                    ),
+                    _TransparentStatCard(
+                      title: 'Students',
+                      count: _totalStudents,
+                      icon: Icons.school,
+                      themeColor: colBlue,
+                    ),
+                    _TransparentStatCard(
+                      title: 'Teachers',
+                      count: _totalTeachers,
+                      icon: Icons.person_pin,
+                      themeColor: colDark,
+                    ),
+                    _TransparentStatCard(
+                      title: 'Total Events',
+                      count: _totalEvents,
+                      icon: Icons.event_available,
+                      themeColor: colPurple,
+                      onSeeAll: () => Navigator.of(context)
+                          .push(
+                            MaterialPageRoute(
+                              builder: (_) => const UnifiedEventScreen(),
+                            ),
+                          )
+                          .then((_) => _fetchStats()),
+                    ),
+                    _TransparentStatCard(
+                      title: 'Pending',
+                      count: _pendingVerifications,
+                      icon: Icons.hourglass_top,
+                      themeColor: colTeal,
+                      isAlert: _pendingVerifications > 0,
+                    ),
+                    _TransparentStatCard(
+                      title: 'Active QRs',
+                      count: _activeQrCodes,
+                      icon: Icons.qr_code_2,
+                      themeColor: colBlue,
+                    ),
+                  ]),
                 ),
-              ]),
-            ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 40)),
+            ],
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 40)),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-// --- SETTINGS SCREEN (CONSTRAINED WIDTH) ---
+// ... SettingsScreen and UsersListView remain unchanged ...
+// Just ensure you include them when pasting the file.
+
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -368,7 +381,6 @@ class SettingsScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Center(
-        // CONSTRAIN WIDTH FOR PC
         child: Container(
           constraints: const BoxConstraints(maxWidth: 800),
           child: SingleChildScrollView(
@@ -567,7 +579,7 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-// --- USERS LIST VIEW (CONSTRAINED WIDTH) ---
+// --- USERS LIST VIEW ---
 class UsersListView extends StatefulWidget {
   const UsersListView({super.key});
 
@@ -734,12 +746,10 @@ class _UsersListViewState extends State<UsersListView> {
     );
   }
 
-  // --- FIXED: PREVENTS EDITING ADMIN ACCOUNTS ---
   Future<void> _showEditUserDialog(
     Map<String, dynamic> userData,
     String docId,
   ) async {
-    // 1. Sanitize Data
     String rawRole = (userData['role'] ?? 'student')
         .toString()
         .toLowerCase()
@@ -749,7 +759,6 @@ class _UsersListViewState extends State<UsersListView> {
         .toLowerCase()
         .trim();
 
-    // 2. SECURITY CHECK: Cannot edit Admin
     if (rawRole == 'admin') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot edit Admin accounts.')),
@@ -820,7 +829,6 @@ class _UsersListViewState extends State<UsersListView> {
     );
   }
 
-  // --- FIXED: PREVENTS DELETING ADMIN ACCOUNTS ---
   Future<void> _deleteUser(String docId, String role) async {
     if (role.toLowerCase() == 'admin') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -878,23 +886,19 @@ class _UsersListViewState extends State<UsersListView> {
         backgroundColor: colSuccess,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      // --- CONSTRAINED WIDTH FOR PC ---
       body: Center(
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 800), // Limits stretching
+          constraints: const BoxConstraints(maxWidth: 800),
           child: StreamBuilder<QuerySnapshot>(
             stream: _db.collection('Users').orderBy('role').snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.hasError) {
+              if (snapshot.hasError)
                 return const Center(child: Text('Error loading users'));
-              }
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting)
                 return const Center(child: CircularProgressIndicator());
-              }
               final users = snapshot.data!.docs;
-              if (users.isEmpty) {
+              if (users.isEmpty)
                 return const Center(child: Text('No users found'));
-              }
 
               return ListView.separated(
                 padding: const EdgeInsets.all(16),
@@ -909,12 +913,10 @@ class _UsersListViewState extends State<UsersListView> {
 
                   Color roleColor = Colors.grey;
                   if (role.toLowerCase() == 'admin') roleColor = colSuccess;
-                  if (role.toLowerCase() == 'teacher') {
+                  if (role.toLowerCase() == 'teacher')
                     roleColor = const Color(0xFF2D3436);
-                  }
-                  if (role.toLowerCase() == 'student') {
+                  if (role.toLowerCase() == 'student')
                     roleColor = const Color(0xFF0984E3);
-                  }
 
                   return Container(
                     decoration: BoxDecoration(
@@ -957,13 +959,11 @@ class _UsersListViewState extends State<UsersListView> {
                       ),
                       trailing: PopupMenuButton<String>(
                         onSelected: (value) {
-                          if (value == 'edit') {
+                          if (value == 'edit')
                             _showEditUserDialog(data, user.id);
-                          }
                           if (value == 'delete') _deleteUser(user.id, role);
                         },
                         itemBuilder: (ctx) => [
-                          // Only show edit/delete if NOT admin
                           if (role.toLowerCase() != 'admin') ...[
                             const PopupMenuItem(
                               value: 'edit',
@@ -1011,7 +1011,6 @@ class _UsersListViewState extends State<UsersListView> {
   }
 }
 
-// ... (Sub-widgets: _QuickActionChip, _TransparentStatCard, _SettingsGroup, _SettingsTile, _SectionHeader remain the same)
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -1201,7 +1200,12 @@ class _TransparentStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+
+    // --- RESPONSIVE ADJUSTMENTS ---
+    // 1. Padding inside card
     final double cardPadding = screenWidth < 400 ? 12.0 : 16.0;
+
+    // 2. Font Size (Scales with width)
     final double countFontSize = screenWidth < 400 ? 24.0 : 28.0;
 
     return Container(
@@ -1247,12 +1251,17 @@ class _TransparentStatCard extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontFamily: 'NexaBold',
-              fontSize: countFontSize,
-              color: themeColor,
+          // Use FittedBox to prevent overflow if number is huge (e.g. 10000)
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              count.toString(),
+              style: TextStyle(
+                fontFamily: 'NexaBold',
+                fontSize: countFontSize,
+                color: themeColor,
+              ),
             ),
           ),
           const SizedBox(height: 4),
