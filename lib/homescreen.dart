@@ -2,12 +2,14 @@ import 'package:attendanceapp/calendarscreen.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:attendanceapp/profilescreen.dart';
 import 'package:attendanceapp/services/location_service.dart';
+import 'package:attendanceapp/services/theme_service.dart';
 import 'package:attendanceapp/todayscreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:attendanceapp/services/auth_service.dart';
 import 'package:attendanceapp/login_page.dart';
+import 'package:attendanceapp/main.dart';
 
 class Homescreen extends StatefulWidget {
   const Homescreen({super.key});
@@ -80,6 +82,17 @@ class _HomescreenState extends State<Homescreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Toggle Theme',
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+            ),
+            onPressed: () {
+              ThemeServiceProvider.of(context).toggleTheme();
+            },
+          ),
+          IconButton(
             tooltip: 'Logout',
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -101,7 +114,9 @@ class _HomescreenState extends State<Homescreen> {
                 ),
               );
               if (confirm == true) {
-                await AuthService().signOut();
+                await AuthService().signOut(
+                  themeService: ThemeServiceProvider.of(context),
+                );
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -120,12 +135,12 @@ class _HomescreenState extends State<Homescreen> {
       bottomNavigationBar: Container(
         height: 70,
         margin: EdgeInsets.only(left: 12, right: 12, bottom: 24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.all(Radius.circular(40)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black26,
+              color: Theme.of(context).shadowColor.withOpacity(0.26),
               blurRadius: 10,
               offset: Offset(2, 2),
             ),
@@ -148,7 +163,7 @@ class _HomescreenState extends State<Homescreen> {
                     child: Container(
                       height: screenHeight,
                       width: screenWidth,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -157,7 +172,9 @@ class _HomescreenState extends State<Homescreen> {
                               navigationIcons[i],
                               color: i == currentIndex
                                   ? primary
-                                  : Colors.black54,
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                               size: i == currentIndex ? 30 : 26,
                             ),
                             i == currentIndex

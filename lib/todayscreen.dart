@@ -10,6 +10,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:attendanceapp/services/location_service.dart';
+import 'package:attendanceapp/main.dart';
 
 // Token classification moved to top-level (enums cannot be inside classes)
 enum _ScanType { checkIn, checkOut, dynamicToken, event, unknown }
@@ -466,15 +467,65 @@ class _TodayScreenState extends State<TodayScreen> {
     // No-op retained for compatibility; FlutterMap rebuild handles markers.
   }
 
+  // Manually refresh location when user clicks refresh button
+  Future<void> _refreshLocation() async {
+    setState(() => location = 'Refreshing location...');
+
+    try {
+      // Request fresh location with high accuracy
+      final position = await _capturePrecisePosition();
+
+      if (position != null) {
+        // Update User coordinates
+        User.lat = position.latitude;
+        User.long = position.longitude;
+
+        // Fetch address immediately
+        _getLocation();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location updated successfully'),
+              duration: Duration(seconds: 2),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        setState(() => location = 'Location unavailable');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Failed to get location. Please check permissions.',
+              ),
+              duration: Duration(seconds: 3),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => location = 'Location unavailable');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     screenHeight = MediaQuery.of(context).size.height;
     screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black87,
         title: const Text(
           'Attendance',
           style: TextStyle(fontFamily: 'NexaBold'),
@@ -487,581 +538,629 @@ class _TodayScreenState extends State<TodayScreen> {
           ),
         ],
       ),
-      backgroundColor: Colors.grey[100],
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: welcome + live date/time
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontFamily: 'NexaRegular',
-                          fontSize: screenWidth / 25,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _username != null && _username!.isNotEmpty
-                            ? 'Student ${_username!}'
-                            : 'Student',
-                        style: TextStyle(
-                          fontFamily: 'NexaBold',
-                          fontSize: screenWidth / 18,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Date & Time
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        DateFormat('dd MMM yyyy').format(DateTime.now()),
-                        style: TextStyle(
-                          fontFamily: 'NexaRegular',
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      // Live clock updated every second
-                      StreamBuilder(
-                        stream: Stream.periodic(const Duration(seconds: 1)),
-                        builder: (context, snapshot) {
-                          return Text(
-                            DateFormat('hh:mm:ss a').format(DateTime.now()),
-                            style: TextStyle(
-                              fontFamily: 'NexaRegular',
-                              color: Colors.black54,
-                              fontSize: 13,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Status card: shows current check-in and check-out times
-              Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 18,
-                  ),
-                  child: Row(
-                    children: [
-                      // Check-in
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: checkIn == '--/--'
-                                    ? Colors.orange[50]
-                                    : Colors.green[50],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.login,
-                                color: checkIn == '--/--'
-                                    ? Colors.orange
-                                    : Colors.green,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Check In',
-                              style: TextStyle(
-                                fontFamily: 'NexaRegular',
-                                color: Colors.black54,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              checkIn,
-                              style: TextStyle(
-                                fontFamily: 'NexaBold',
-                                fontSize: 18,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Divider
-                      Container(height: 64, width: 1, color: Colors.grey[200]),
-                      // Check-out
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: checkOut == '--/--'
-                                    ? Colors.blue[50]
-                                    : Colors.grey[200],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.logout,
-                                color: checkOut == '--/--'
-                                    ? Colors.blue
-                                    : Colors.grey[700],
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Check Out',
-                              style: TextStyle(
-                                fontFamily: 'NexaRegular',
-                                color: Colors.black54,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              checkOut,
-                              style: TextStyle(
-                                fontFamily: 'NexaBold',
-                                fontSize: 18,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // Location chip: reverse-geocoded address for current coordinates
-              Row(
-                children: [
-                  const Icon(
-                    Icons.location_on_outlined,
-                    color: Colors.black45,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      location.trim().isNotEmpty
-                          ? location
-                          : 'Fetching location...',
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontFamily: 'NexaRegular',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 14),
-              // Map: show markers for check-in/out coordinates when available
-              if (checkInLat != null || checkOutLat != null)
-                SizedBox(
-                  height: 220,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: FlutterMap(
-                      options: MapOptions(
-                        initialCenter: latlng.LatLng(
-                          (checkOutLat ?? checkInLat) ?? 0.0,
-                          (checkOutLng ?? checkInLng) ?? 0.0,
-                        ),
-                        initialZoom: 15,
-                        interactionOptions: const InteractionOptions(
-                          enableMultiFingerGestureRace: true,
-                        ),
-                      ),
+        child: RefreshIndicator(
+          onRefresh: _refreshLocation,
+          color: primary,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: welcome + live date/time
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.example.attendanceapp',
+                        Text(
+                          'Welcome',
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color,
+                            fontFamily: 'NexaRegular',
+                            fontSize: screenWidth / 25,
+                          ),
                         ),
-                        MarkerLayer(
-                          markers: [
-                            if (checkInLat != null && checkInLng != null)
-                              Marker(
-                                width: 40,
-                                height: 40,
-                                point: latlng.LatLng(checkInLat!, checkInLng!),
-                                child: _buildMarker('IN', Colors.green),
+                        const SizedBox(height: 6),
+                        Text(
+                          _username != null && _username!.isNotEmpty
+                              ? 'Student ${_username!}'
+                              : 'Student',
+                          style: TextStyle(
+                            fontFamily: 'NexaBold',
+                            fontSize: screenWidth / 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Date & Time
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          DateFormat('dd MMM yyyy').format(DateTime.now()),
+                          style: TextStyle(
+                            fontFamily: 'NexaRegular',
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Live clock updated every second
+                        StreamBuilder(
+                          stream: Stream.periodic(const Duration(seconds: 1)),
+                          builder: (context, snapshot) {
+                            return Text(
+                              DateFormat('hh:mm:ss a').format(DateTime.now()),
+                              style: TextStyle(
+                                fontFamily: 'NexaRegular',
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.color,
+                                fontSize: 13,
                               ),
-                            if (checkOutLat != null && checkOutLng != null)
-                              Marker(
-                                width: 40,
-                                height: 40,
-                                point: latlng.LatLng(
-                                  checkOutLat!,
-                                  checkOutLng!,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Status card: shows current check-in and check-out times
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 18,
+                    ),
+                    child: Row(
+                      children: [
+                        // Check-in
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: checkIn == '--/--'
+                                      ? Colors.orange.withOpacity(0.2)
+                                      : Colors.green.withOpacity(0.2),
+                                  shape: BoxShape.circle,
                                 ),
-                                child: _buildMarker('OUT', Colors.blue),
+                                child: Icon(
+                                  Icons.login,
+                                  color: checkIn == '--/--'
+                                      ? Colors.orange
+                                      : Colors.green,
+                                  size: 28,
+                                ),
                               ),
-                          ],
+                              const SizedBox(height: 12),
+                              Text(
+                                'Check In',
+                                style: TextStyle(
+                                  fontFamily: 'NexaRegular',
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                checkIn,
+                                style: TextStyle(
+                                  fontFamily: 'NexaBold',
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Divider
+                        Container(
+                          height: 64,
+                          width: 1,
+                          color: Theme.of(context).dividerColor,
+                        ),
+                        // Check-out
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: checkOut == '--/--'
+                                      ? Colors.blue.withOpacity(0.2)
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceContainerHighest,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.logout,
+                                  color: checkOut == '--/--'
+                                      ? Colors.blue
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Check Out',
+                                style: TextStyle(
+                                  fontFamily: 'NexaRegular',
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                checkOut,
+                                style: TextStyle(
+                                  fontFamily: 'NexaBold',
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
 
-              const SizedBox(height: 26),
+                const SizedBox(height: 18),
 
-              // Scan CTA: triggers QR scan and handles sequential CHECKIN then CHECKOUT,
-              // including event geofence validation and Firestore persistence.
-              Center(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                // Location chip: reverse-geocoded address for current coordinates
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      color: Theme.of(
+                        context,
+                      ).iconTheme.color?.withOpacity(0.7),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        location.trim().isNotEmpty
+                            ? location
+                            : 'Fetching location...',
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                          fontFamily: 'NexaRegular',
+                        ),
                       ),
                     ),
-                    icon: const Icon(Icons.qr_code_scanner, size: 22),
-                    label: Text(
-                      checkIn == '--/--'
-                          ? 'Scan to Check In'
-                          : (checkOut == '--/--'
-                                ? 'Scan to Check Out'
-                                : 'Scans Completed'),
-                      style: const TextStyle(
-                        fontFamily: 'NexaBold',
-                        fontSize: 16,
+                    if (location.toLowerCase().contains('unavailable') ||
+                        location.trim().isEmpty)
+                      IconButton(
+                        icon: Icon(Icons.refresh, color: primary, size: 20),
+                        tooltip: 'Refresh Location',
+                        onPressed: _refreshLocation,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+                // Map: show markers for check-in/out coordinates when available
+                if (checkInLat != null || checkOutLat != null)
+                  SizedBox(
+                    height: 220,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: FlutterMap(
+                        options: MapOptions(
+                          initialCenter: latlng.LatLng(
+                            (checkOutLat ?? checkInLat) ?? 0.0,
+                            (checkOutLng ?? checkInLng) ?? 0.0,
+                          ),
+                          initialZoom: 15,
+                          interactionOptions: const InteractionOptions(
+                            enableMultiFingerGestureRace: true,
+                          ),
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.example.attendanceapp',
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              if (checkInLat != null && checkInLng != null)
+                                Marker(
+                                  width: 40,
+                                  height: 40,
+                                  point: latlng.LatLng(
+                                    checkInLat!,
+                                    checkInLng!,
+                                  ),
+                                  child: _buildMarker('IN', Colors.green),
+                                ),
+                              if (checkOutLat != null && checkOutLng != null)
+                                Marker(
+                                  width: 40,
+                                  height: 40,
+                                  point: latlng.LatLng(
+                                    checkOutLat!,
+                                    checkOutLng!,
+                                  ),
+                                  child: _buildMarker('OUT', Colors.blue),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    onPressed: checkOut == '--/--'
-                        ? () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final code = await Navigator.push<String>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => _QrScanScreen(primary: primary),
-                              ),
-                            );
-                            if (!mounted) return;
-                            if (code == null) return;
-                            // Classify token intent and validate expiry/grace timing.
-                            final scanType = _classifyToken(code);
-                            final tokenWindow = await _evaluateTokenWindow(
-                              code,
-                            );
-                            if (!mounted) return;
+                  ),
 
-                            Position? position;
-                            double? lat;
-                            double? lng;
-                            if (tokenWindow.allowProceed) {
-                              position = await _capturePrecisePosition();
+                const SizedBox(height: 26),
+
+                // Scan CTA: triggers QR scan and handles sequential CHECKIN then CHECKOUT,
+                // including event geofence validation and Firestore persistence.
+                Center(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primary,
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.qr_code_scanner, size: 22),
+                      label: Text(
+                        checkIn == '--/--'
+                            ? 'Scan to Check In'
+                            : (checkOut == '--/--'
+                                  ? 'Scan to Check Out'
+                                  : 'Scans Completed'),
+                        style: const TextStyle(
+                          fontFamily: 'NexaBold',
+                          fontSize: 16,
+                        ),
+                      ),
+                      onPressed: checkOut == '--/--'
+                          ? () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              final code = await Navigator.push<String>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      _QrScanScreen(primary: primary),
+                                ),
+                              );
                               if (!mounted) return;
-                              lat = position?.latitude;
-                              lng = position?.longitude;
-                              if (position != null) {
-                                try {
-                                  final placemarks =
-                                      await placemarkFromCoordinates(
-                                        position.latitude,
-                                        position.longitude,
-                                      );
-                                  if (!mounted) return;
-                                  if (placemarks.isNotEmpty) {
-                                    final p = placemarks.first;
-                                    location =
-                                        [
-                                              p.street,
-                                              p.subLocality,
-                                              p.locality,
-                                              p.administrativeArea,
-                                              p.postalCode,
-                                              p.country,
-                                            ]
-                                            .whereType<String>()
-                                            .where((e) => e.trim().isNotEmpty)
-                                            .join(', ');
-                                  }
-                                } catch (_) {}
-                              }
-                            }
-                            final now = DateTime.now();
-                            final dateId = DateFormat(
-                              'dd MMMM yyyy',
-                            ).format(now);
-                            final timeStr = DateFormat('hh:mm').format(now);
-                            try {
-                              final studentQuery = await FirebaseFirestore
-                                  .instance
-                                  .collection('Student')
-                                  .where('id', isEqualTo: User.studentId.trim())
-                                  .limit(1)
-                                  .get();
+                              if (code == null) return;
+                              // Classify token intent and validate expiry/grace timing.
+                              final scanType = _classifyToken(code);
+                              final tokenWindow = await _evaluateTokenWindow(
+                                code,
+                              );
                               if (!mounted) return;
-                              if (studentQuery.docs.isEmpty) {
+
+                              Position? position;
+                              double? lat;
+                              double? lng;
+                              if (tokenWindow.allowProceed) {
+                                position = await _capturePrecisePosition();
                                 if (!mounted) return;
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Student record not found'),
-                                  ),
-                                );
-                                return;
-                              }
-                              final studentDocId = studentQuery.docs.first.id;
-                              final studentData = studentQuery.docs.first
-                                  .data();
-                              final recordRef = FirebaseFirestore.instance
-                                  .collection('Student')
-                                  .doc(studentDocId)
-                                  .collection('Record')
-                                  .doc(dateId);
-                              final recordSnap = await recordRef.get();
-                              if (!mounted) return;
-                              final existing = recordSnap.data();
-
-                              // If QR already expired beyond grace, mark absent and exit early.
-                              if (!tokenWindow.allowProceed) {
-                                await recordRef.set({
-                                  'date': Timestamp.now(),
-                                  'status': tokenWindow.status,
-                                  'statusReason':
-                                      tokenWindow.message ?? 'QR expired.',
-                                  'qrCode': code,
-                                }, SetOptions(merge: true));
-                                await _writeAttendanceLog(
-                                  studentDocId: studentDocId,
-                                  studentData: studentData,
-                                  dateId: dateId,
-                                  status: tokenWindow.status,
-                                  eventTimestamp: Timestamp.now(),
-                                );
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      tokenWindow.message ??
-                                          'QR expired or not recognized.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              // Guard: wrong sequence or duplicate scans
-                              if (checkIn == '--/--') {
-                                // Expect a CHECKIN token for first scan
-                                if (scanType != _ScanType.checkIn) {
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Please scan a CHECK-IN QR first',
-                                      ),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                // Validate location for event
-                                final eventId = _extractEventId(code) ?? 'NONE';
-                                final validationError =
-                                    await _validateLocationForEvent(eventId);
-                                if (validationError != null) {
-                                  if (!mounted) return;
-                                  messenger.showSnackBar(
-                                    SnackBar(content: Text(validationError)),
-                                  );
-                                  return;
-                                }
-                                await recordRef.set({
-                                  'date': Timestamp.now(),
-                                  'checkIn': timeStr,
-                                  'checkOut': '--/--',
-                                  'location': location,
-                                  'qrCode': code,
-                                  'status': tokenWindow.status,
-                                  'statusReason': tokenWindow.message,
-                                  'statusEvaluatedAt': Timestamp.now(),
-                                  if (lat != null) 'checkInLat': lat,
-                                  if (lng != null) 'checkInLng': lng,
-                                }, SetOptions(merge: true));
-                                await _writeAttendanceLog(
-                                  studentDocId: studentDocId,
-                                  studentData: studentData,
-                                  dateId: dateId,
-                                  status: tokenWindow.status,
-                                  eventTimestamp: Timestamp.now(),
-                                );
-                                if (!mounted) return;
-                                setState(() {
-                                  checkIn = timeStr;
-                                  checkInLat = lat;
-                                  checkInLng = lng;
-                                });
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      tokenWindow.status == 'Late'
-                                          ? 'Checked in (late - grace window)'
-                                          : 'Checked in via QR',
-                                    ),
-                                  ),
-                                );
-                              } else if (checkOut == '--/--') {
-                                // Already checked in; require CHECKOUT token
-                                final storedCheckInCode = existing == null
-                                    ? null
-                                    : existing['qrCode'];
-                                if (scanType == _ScanType.checkIn &&
-                                    storedCheckInCode == code) {
-                                  if (!mounted) return;
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Already checked in with this QR',
-                                      ),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                if (scanType != _ScanType.checkOut) {
-                                  if (!mounted) return;
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Scan a CHECK-OUT QR to check out',
-                                      ),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                // Validate location for event
-                                final eventId = _extractEventId(code) ?? 'NONE';
-                                final validationError =
-                                    await _validateLocationForEvent(eventId);
-                                if (validationError != null) {
-                                  if (!mounted) return;
-                                  messenger.showSnackBar(
-                                    SnackBar(content: Text(validationError)),
-                                  );
-                                  return;
-                                }
-                                if (!recordSnap.exists) {
-                                  await recordRef.set({
-                                    'checkIn': checkIn,
-                                    'checkOut': timeStr,
-                                    'qrCodeOut': code,
-                                    'status':
-                                        existing?['status'] ??
-                                        tokenWindow.status,
-                                    'statusReason':
-                                        existing?['statusReason'] ??
-                                        tokenWindow.message,
-                                    'statusEvaluatedAt':
-                                        existing?['statusEvaluatedAt'] ??
-                                        Timestamp.now(),
-                                    if (lat != null) 'checkOutLat': lat,
-                                    if (lng != null) 'checkOutLng': lng,
-                                  });
-                                } else {
-                                  final storedOutCode = existing?['qrCodeOut'];
-                                  if (storedOutCode == code) {
+                                lat = position?.latitude;
+                                lng = position?.longitude;
+                                if (position != null) {
+                                  try {
+                                    final placemarks =
+                                        await placemarkFromCoordinates(
+                                          position.latitude,
+                                          position.longitude,
+                                        );
                                     if (!mounted) return;
+                                    if (placemarks.isNotEmpty) {
+                                      final p = placemarks.first;
+                                      location =
+                                          [
+                                                p.street,
+                                                p.subLocality,
+                                                p.locality,
+                                                p.administrativeArea,
+                                                p.postalCode,
+                                                p.country,
+                                              ]
+                                              .whereType<String>()
+                                              .where((e) => e.trim().isNotEmpty)
+                                              .join(', ');
+                                    }
+                                  } catch (_) {}
+                                }
+                              }
+                              final now = DateTime.now();
+                              final dateId = DateFormat(
+                                'dd MMMM yyyy',
+                              ).format(now);
+                              final timeStr = DateFormat('hh:mm').format(now);
+                              try {
+                                final studentQuery = await FirebaseFirestore
+                                    .instance
+                                    .collection('Student')
+                                    .where(
+                                      'id',
+                                      isEqualTo: User.studentId.trim(),
+                                    )
+                                    .limit(1)
+                                    .get();
+                                if (!mounted) return;
+                                if (studentQuery.docs.isEmpty) {
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Student record not found'),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                final studentDocId = studentQuery.docs.first.id;
+                                final studentData = studentQuery.docs.first
+                                    .data();
+                                final recordRef = FirebaseFirestore.instance
+                                    .collection('Student')
+                                    .doc(studentDocId)
+                                    .collection('Record')
+                                    .doc(dateId);
+                                final recordSnap = await recordRef.get();
+                                if (!mounted) return;
+                                final existing = recordSnap.data();
+
+                                // If QR already expired beyond grace, mark absent and exit early.
+                                if (!tokenWindow.allowProceed) {
+                                  await recordRef.set({
+                                    'date': Timestamp.now(),
+                                    'status': tokenWindow.status,
+                                    'statusReason':
+                                        tokenWindow.message ?? 'QR expired.',
+                                    'qrCode': code,
+                                  }, SetOptions(merge: true));
+                                  await _writeAttendanceLog(
+                                    studentDocId: studentDocId,
+                                    studentData: studentData,
+                                    dateId: dateId,
+                                    status: tokenWindow.status,
+                                    eventTimestamp: Timestamp.now(),
+                                  );
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        tokenWindow.message ??
+                                            'QR expired or not recognized.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                // Guard: wrong sequence or duplicate scans
+                                if (checkIn == '--/--') {
+                                  // Expect a CHECKIN token for first scan
+                                  if (scanType != _ScanType.checkIn) {
                                     messenger.showSnackBar(
                                       const SnackBar(
                                         content: Text(
-                                          'Already checked out with this QR',
+                                          'Please scan a CHECK-IN QR first',
                                         ),
                                       ),
                                     );
                                     return;
                                   }
-                                  await recordRef.update({
-                                    'checkOut': timeStr,
-                                    'qrCodeOut': code,
-                                    'status':
+                                  // Validate location for event
+                                  final eventId =
+                                      _extractEventId(code) ?? 'NONE';
+                                  final validationError =
+                                      await _validateLocationForEvent(eventId);
+                                  if (validationError != null) {
+                                    if (!mounted) return;
+                                    messenger.showSnackBar(
+                                      SnackBar(content: Text(validationError)),
+                                    );
+                                    return;
+                                  }
+                                  await recordRef.set({
+                                    'date': Timestamp.now(),
+                                    'checkIn': timeStr,
+                                    'checkOut': '--/--',
+                                    'location': location,
+                                    'qrCode': code,
+                                    'status': tokenWindow.status,
+                                    'statusReason': tokenWindow.message,
+                                    'statusEvaluatedAt': Timestamp.now(),
+                                    if (lat != null) 'checkInLat': lat,
+                                    if (lng != null) 'checkInLng': lng,
+                                  }, SetOptions(merge: true));
+                                  await _writeAttendanceLog(
+                                    studentDocId: studentDocId,
+                                    studentData: studentData,
+                                    dateId: dateId,
+                                    status: tokenWindow.status,
+                                    eventTimestamp: Timestamp.now(),
+                                  );
+                                  if (!mounted) return;
+                                  setState(() {
+                                    checkIn = timeStr;
+                                    checkInLat = lat;
+                                    checkInLng = lng;
+                                  });
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        tokenWindow.status == 'Late'
+                                            ? 'Checked in (late - grace window)'
+                                            : 'Checked in via QR',
+                                      ),
+                                    ),
+                                  );
+                                } else if (checkOut == '--/--') {
+                                  // Already checked in; require CHECKOUT token
+                                  final storedCheckInCode = existing == null
+                                      ? null
+                                      : existing['qrCode'];
+                                  if (scanType == _ScanType.checkIn &&
+                                      storedCheckInCode == code) {
+                                    if (!mounted) return;
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Already checked in with this QR',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  if (scanType != _ScanType.checkOut) {
+                                    if (!mounted) return;
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Scan a CHECK-OUT QR to check out',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  // Validate location for event
+                                  final eventId =
+                                      _extractEventId(code) ?? 'NONE';
+                                  final validationError =
+                                      await _validateLocationForEvent(eventId);
+                                  if (validationError != null) {
+                                    if (!mounted) return;
+                                    messenger.showSnackBar(
+                                      SnackBar(content: Text(validationError)),
+                                    );
+                                    return;
+                                  }
+                                  if (!recordSnap.exists) {
+                                    await recordRef.set({
+                                      'checkIn': checkIn,
+                                      'checkOut': timeStr,
+                                      'qrCodeOut': code,
+                                      'status':
+                                          existing?['status'] ??
+                                          tokenWindow.status,
+                                      'statusReason':
+                                          existing?['statusReason'] ??
+                                          tokenWindow.message,
+                                      'statusEvaluatedAt':
+                                          existing?['statusEvaluatedAt'] ??
+                                          Timestamp.now(),
+                                      if (lat != null) 'checkOutLat': lat,
+                                      if (lng != null) 'checkOutLng': lng,
+                                    });
+                                  } else {
+                                    final storedOutCode =
+                                        existing?['qrCodeOut'];
+                                    if (storedOutCode == code) {
+                                      if (!mounted) return;
+                                      messenger.showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Already checked out with this QR',
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    await recordRef.update({
+                                      'checkOut': timeStr,
+                                      'qrCodeOut': code,
+                                      'status':
+                                          existing?['status'] ??
+                                          tokenWindow.status,
+                                      'statusReason':
+                                          existing?['statusReason'] ??
+                                          tokenWindow.message,
+                                      'statusEvaluatedAt':
+                                          existing?['statusEvaluatedAt'] ??
+                                          Timestamp.now(),
+                                      if (lat != null) 'checkOutLat': lat,
+                                      if (lng != null) 'checkOutLng': lng,
+                                    });
+                                  }
+                                  await _writeAttendanceLog(
+                                    studentDocId: studentDocId,
+                                    studentData: studentData,
+                                    dateId: dateId,
+                                    status:
                                         existing?['status'] ??
                                         tokenWindow.status,
-                                    'statusReason':
-                                        existing?['statusReason'] ??
-                                        tokenWindow.message,
-                                    'statusEvaluatedAt':
-                                        existing?['statusEvaluatedAt'] ??
-                                        Timestamp.now(),
-                                    if (lat != null) 'checkOutLat': lat,
-                                    if (lng != null) 'checkOutLng': lng,
+                                    eventTimestamp: Timestamp.now(),
+                                    checkOutTime: Timestamp.now(),
+                                  );
+                                  if (!mounted) return;
+                                  setState(() {
+                                    checkOut = timeStr;
+                                    checkOutLat = lat;
+                                    checkOutLng = lng;
                                   });
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Checked out via QR'),
+                                    ),
+                                  );
+                                } else {
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Already checked out today',
+                                      ),
+                                    ),
+                                  );
                                 }
-                                await _writeAttendanceLog(
-                                  studentDocId: studentDocId,
-                                  studentData: studentData,
-                                  dateId: dateId,
-                                  status:
-                                      existing?['status'] ?? tokenWindow.status,
-                                  eventTimestamp: Timestamp.now(),
-                                  checkOutTime: Timestamp.now(),
-                                );
                                 if (!mounted) return;
-                                setState(() {
-                                  checkOut = timeStr;
-                                  checkOutLat = lat;
-                                  checkOutLng = lng;
-                                });
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Checked out via QR'),
-                                  ),
-                                );
-                              } else {
+                                // Refresh UI to reflect latest record and markers
+                                _getRecord();
+                                _refreshMapSymbols();
+                              } catch (e) {
                                 if (!mounted) return;
                                 messenger.showSnackBar(
                                   const SnackBar(
-                                    content: Text('Already checked out today'),
+                                    content: Text('QR attendance failed'),
                                   ),
                                 );
                               }
-                              if (!mounted) return;
-                              // Refresh UI to reflect latest record and markers
-                              _getRecord();
-                              _refreshMapSymbols();
-                            } catch (e) {
-                              if (!mounted) return;
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text('QR attendance failed'),
-                                ),
-                              );
                             }
-                          }
-                        : null,
+                          : null,
+                    ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 18),
-            ],
+                const SizedBox(height: 18),
+              ],
+            ),
           ),
         ),
       ),
@@ -1080,10 +1179,10 @@ class _TodayScreenState extends State<TodayScreen> {
           ),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'NexaBold',
               fontSize: 12,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
         ),
@@ -1094,9 +1193,9 @@ class _TodayScreenState extends State<TodayScreen> {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Colors.black26,
+                color: Theme.of(context).shadowColor.withOpacity(0.26),
                 blurRadius: 3,
                 offset: Offset(1, 1),
               ),
@@ -1128,7 +1227,7 @@ class _QrScanScreenState extends State<_QrScanScreen> {
           'Scan Attendance QR',
           style: TextStyle(fontFamily: 'NexaBold'),
         ),
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
       body: Stack(
         children: [
@@ -1148,11 +1247,11 @@ class _QrScanScreenState extends State<_QrScanScreen> {
             alignment: Alignment.bottomCenter,
             child: Container(
               padding: const EdgeInsets.all(12),
-              color: Colors.black54,
-              child: const Text(
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.85),
+              child: Text(
                 'Point camera at the provided QR code',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontFamily: 'NexaRegular',
                 ),
               ),

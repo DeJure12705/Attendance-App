@@ -6,6 +6,7 @@ import 'package:attendanceapp/verification_screen.dart';
 import 'package:attendanceapp/unified_event_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:attendanceapp/main.dart';
 
 class TeacherHome extends StatefulWidget {
   const TeacherHome({super.key});
@@ -300,9 +301,12 @@ class _TeacherHomeState extends State<TeacherHome> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(fontFamily: 'NexaBold', color: Colors.grey),
+              style: TextStyle(
+                fontFamily: 'NexaBold',
+                color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           ElevatedButton(
@@ -313,9 +317,12 @@ class _TeacherHomeState extends State<TeacherHome> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text(
+            child: Text(
               'Sign Out',
-              style: TextStyle(fontFamily: 'NexaBold', color: Colors.white),
+              style: TextStyle(
+                fontFamily: 'NexaBold',
+                color: Theme.of(ctx).colorScheme.onError,
+              ),
             ),
           ),
         ],
@@ -323,7 +330,9 @@ class _TeacherHomeState extends State<TeacherHome> {
     );
 
     if (confirm == true && mounted) {
-      await AuthService().signOut();
+      await AuthService().signOut(
+        themeService: ThemeServiceProvider.of(context),
+      );
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -343,7 +352,7 @@ class _TeacherHomeState extends State<TeacherHome> {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: _primary,
@@ -354,21 +363,35 @@ class _TeacherHomeState extends State<TeacherHome> {
               : _currentIndex == 1
               ? 'My Profile'
               : 'Settings',
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'NexaBold',
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             fontSize: 22,
           ),
         ),
-        automaticallyImplyLeading: false, // Hides back button
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            tooltip: 'Toggle Theme',
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+              color: Theme.of(context).colorScheme.onPrimary,
+            ),
+            onPressed: () {
+              ThemeServiceProvider.of(context).toggleTheme();
+            },
+          ),
+        ],
       ),
       body: screens[_currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Theme.of(context).shadowColor.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -378,11 +401,11 @@ class _TeacherHomeState extends State<TeacherHome> {
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           selectedItemColor: _primary,
-          unselectedItemColor: Colors.grey,
+          unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
           selectedLabelStyle: const TextStyle(fontFamily: 'NexaBold'),
           unselectedLabelStyle: const TextStyle(fontFamily: 'NexaRegular'),
           type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           elevation: 0,
           items: const [
             BottomNavigationBarItem(
@@ -438,20 +461,22 @@ class _TeacherHomeState extends State<TeacherHome> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Welcome back,',
                       style: TextStyle(
                         fontFamily: 'NexaRegular',
-                        color: Colors.white70,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary.withOpacity(0.8),
                         fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       _loadingName ? 'Teacher' : (_teacherName ?? 'Teacher'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'NexaBold',
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         fontSize: 28,
                       ),
                     ),
@@ -462,14 +487,16 @@ class _TeacherHomeState extends State<TeacherHome> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         User.email,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'NexaRegular',
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontSize: 14,
                         ),
                       ),
@@ -478,12 +505,12 @@ class _TeacherHomeState extends State<TeacherHome> {
                 ),
               ),
               const SizedBox(height: 30),
-              const Text(
+              Text(
                 'Quick Actions',
                 style: TextStyle(
                   fontFamily: 'NexaBold',
                   fontSize: 20,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
@@ -549,12 +576,12 @@ class _TeacherHomeState extends State<TeacherHome> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Section Header
-        const Text(
+        Text(
           'Attendance Log',
           style: TextStyle(
             fontFamily: 'NexaBold',
             fontSize: 20,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -562,11 +589,11 @@ class _TeacherHomeState extends State<TeacherHome> {
         Container(
           constraints: const BoxConstraints(maxHeight: 400),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Theme.of(context).shadowColor.withOpacity(0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -582,7 +609,7 @@ class _TeacherHomeState extends State<TeacherHome> {
                 )
               // Empty state: no records match this teacher advisory
               : _attendanceRecords.isEmpty
-              ? const Center(
+              ? Center(
                   child: Padding(
                     padding: EdgeInsets.all(40),
                     child: Text(
@@ -590,7 +617,7 @@ class _TeacherHomeState extends State<TeacherHome> {
                       style: TextStyle(
                         fontFamily: 'NexaRegular',
                         fontSize: 14,
-                        color: Colors.grey,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -675,10 +702,10 @@ class _TeacherHomeState extends State<TeacherHome> {
                 // Student Name
                 Text(
                   studentName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'NexaBold',
                     fontSize: 15,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -688,32 +715,40 @@ class _TeacherHomeState extends State<TeacherHome> {
                   style: TextStyle(
                     fontFamily: 'NexaRegular',
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
                 // Check-in and Check-out times
                 Row(
                   children: [
-                    Icon(Icons.login, size: 12, color: Colors.grey[500]),
+                    Icon(
+                      Icons.login,
+                      size: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       checkInTimeStr,
                       style: TextStyle(
                         fontFamily: 'NexaRegular',
                         fontSize: 11,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Icon(Icons.logout, size: 12, color: Colors.grey[500]),
+                    Icon(
+                      Icons.logout,
+                      size: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       checkOutTimeStr,
                       style: TextStyle(
                         fontFamily: 'NexaRegular',
                         fontSize: 11,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -786,7 +821,7 @@ class _TeacherHomeState extends State<TeacherHome> {
                     ),
                     child: CircleAvatar(
                       radius: 60,
-                      backgroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
                       // Show latest uploaded profile picture, fallback to app icon
                       backgroundImage:
                           (_teacherProfileUrl != null &&
@@ -991,15 +1026,15 @@ class _TeacherHomeState extends State<TeacherHome> {
                 style: TextStyle(
                   fontFamily: 'NexaRegular',
                   fontSize: 12,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'NexaBold',
                   fontSize: 16,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:attendanceapp/services/auth_service.dart';
 import 'package:attendanceapp/login_page.dart';
+import 'package:attendanceapp/services/theme_service.dart';
 
 class PendingVerificationScreen extends StatelessWidget {
   const PendingVerificationScreen({super.key});

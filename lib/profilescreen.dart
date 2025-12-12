@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:attendanceapp/services/auth_service.dart';
+import 'package:attendanceapp/services/theme_service.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:attendanceapp/config/cloudinary_config.dart';
 
@@ -110,7 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -346,7 +347,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : CustomScrollView(
@@ -379,12 +380,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: Colors.white,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimary,
                                         width: 4,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
+                                          color: Theme.of(
+                                            context,
+                                          ).shadowColor.withOpacity(0.2),
                                           blurRadius: 15,
                                           offset: const Offset(0, 5),
                                         ),
@@ -392,7 +397,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     child: CircleAvatar(
                                       radius: 50,
-                                      backgroundColor: Colors.white,
+                                      backgroundColor: Theme.of(
+                                        context,
+                                      ).colorScheme.surface,
                                       backgroundImage: _pickedImage != null
                                           ? FileImage(_pickedImage!)
                                           : (_photoUrl != null &&
@@ -415,15 +422,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     Positioned.fill(
                                       child: Container(
                                         decoration: BoxDecoration(
-                                          color: Colors.black38,
+                                          color: Theme.of(
+                                            context,
+                                          ).shadowColor.withOpacity(0.38),
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Center(
+                                        child: Center(
                                           child: CircularProgressIndicator(
                                             strokeWidth: 3,
                                             valueColor:
                                                 AlwaysStoppedAnimation<Color>(
-                                                  Colors.white,
+                                                  Theme.of(
+                                                    context,
+                                                  ).colorScheme.onPrimary,
                                                 ),
                                           ),
                                         ),
@@ -437,13 +448,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.surface,
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                0.2,
-                                              ),
+                                              color: Theme.of(
+                                                context,
+                                              ).shadowColor.withOpacity(0.2),
                                               blurRadius: 8,
                                               offset: const Offset(0, 2),
                                             ),
@@ -632,7 +645,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     child: ElevatedButton.icon(
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: _primary,
-                                        foregroundColor: Colors.white,
+                                        foregroundColor: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimary,
                                         elevation: 2,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
@@ -642,12 +657,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                       onPressed: _saving ? null : _saveProfile,
                                       icon: _saving
-                                          ? const SizedBox(
+                                          ? SizedBox(
                                               height: 20,
                                               width: 20,
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                color: Colors.white,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.onPrimary,
                                               ),
                                             )
                                           : const Icon(Icons.save_rounded),
@@ -767,7 +784,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontFamily: 'NexaRegular',
                   fontSize: 12,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 2),
@@ -809,7 +826,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: const TextStyle(fontFamily: 'NexaRegular', fontSize: 16),
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.grey[50],
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             prefixIcon: Icon(icon, color: _primary.withOpacity(0.7)),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -817,11 +834,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -852,14 +873,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Cancel',
-              style: TextStyle(fontFamily: 'NexaBold', color: Colors.grey[600]),
+              style: TextStyle(
+                fontFamily: 'NexaBold',
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onError,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),

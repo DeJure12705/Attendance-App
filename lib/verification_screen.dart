@@ -198,8 +198,7 @@ class VerificationScreen extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(maxWidth: 600),
           child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            // Order by creation time
-            stream: query.orderBy('createdAt', descending: true).snapshots(),
+            stream: query.snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -248,6 +247,20 @@ class VerificationScreen extends StatelessWidget {
                   return userAdvisory == teacherAdvisory;
                 }).toList();
               }
+
+              // Client-side sorting by createdAt (newest first)
+              docs.sort((a, b) {
+                final aCreatedAt = a.data()['createdAt'] as Timestamp?;
+                final bCreatedAt = b.data()['createdAt'] as Timestamp?;
+
+                // Handle null timestamps - put them at the end
+                if (aCreatedAt == null && bCreatedAt == null) return 0;
+                if (aCreatedAt == null) return 1;
+                if (bCreatedAt == null) return -1;
+
+                // Sort descending (newest first)
+                return bCreatedAt.compareTo(aCreatedAt);
+              });
 
               if (docs.isEmpty) {
                 return Center(

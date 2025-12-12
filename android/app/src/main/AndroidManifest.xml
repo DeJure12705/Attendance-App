@@ -7,7 +7,8 @@
     <application
         android:label="Attendance App"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <!-- Google Maps API Key (prevent crashes if missing by providing a placeholder string) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
