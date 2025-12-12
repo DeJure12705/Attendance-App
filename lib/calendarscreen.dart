@@ -61,18 +61,127 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _pickMonth() async {
-    final picked = await showDatePicker(
+    final now = DateTime.now();
+    int selectedYear = _selectedMonth.year;
+    int selectedMonth = _selectedMonth.month;
+
+    await showDialog(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-      helpText: 'Select any date in the month',
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Select Month'),
+              content: SizedBox(
+                width: 300,
+                height: 400,
+                child: Column(
+                  children: [
+                    // Year selector
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          onPressed: () {
+                            setDialogState(() {
+                              selectedYear--;
+                            });
+                          },
+                        ),
+                        Text(
+                          selectedYear.toString(),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          onPressed: () {
+                            setDialogState(() {
+                              selectedYear++;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Month grid
+                    Expanded(
+                      child: GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                            ),
+                        itemCount: 12,
+                        itemBuilder: (context, index) {
+                          final month = index + 1;
+                          final isSelected =
+                              selectedYear == _selectedMonth.year &&
+                              month == _selectedMonth.month;
+                          final monthName = DateFormat(
+                            'MMM',
+                          ).format(DateTime(2000, month));
+
+                          return InkWell(
+                            onTap: () {
+                              setDialogState(() {
+                                selectedMonth = month;
+                              });
+                              setState(() {
+                                _selectedMonth = DateTime(selectedYear, month);
+                              });
+                              Navigator.of(context).pop();
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? primary
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? primary
+                                      : Theme.of(context).dividerColor,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  monthName,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Theme.of(
+                                            context,
+                                          ).textTheme.bodyLarge?.color,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
-    if (picked != null) {
-      setState(() {
-        _selectedMonth = DateTime(picked.year, picked.month);
-      });
-    }
   }
 
   @override
@@ -80,6 +189,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     screenHeight = MediaQuery.of(context).size.height;
     screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -90,7 +200,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Text(
                 'My Attendance',
                 style: TextStyle(
-                  color: Colors.black54,
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
                   fontFamily: 'NexaBold',
                   fontSize: screenWidth / 18,
                 ),
@@ -104,7 +214,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   child: Text(
                     DateFormat('MMMM yyyy').format(_selectedMonth),
                     style: TextStyle(
-                      color: Colors.black54,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                       fontFamily: 'NexaBold',
                       fontSize: screenWidth / 18,
                     ),
@@ -118,7 +228,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: Text(
                       'Pick a Month',
                       style: TextStyle(
-                        color: Colors.black54,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
                         fontFamily: 'NexaBold',
                         fontSize: screenWidth / 18,
                       ),
@@ -131,7 +241,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
             if (_loadingStudent)
               const Center(child: CircularProgressIndicator())
             else if (_studentDocId == null || _studentDocId!.isEmpty)
-              const Text('Student not found.')
+              Text(
+                'Student not found.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              )
             else
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -172,7 +287,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   records.sort((a, b) => a.date.compareTo(b.date));
 
                   if (records.isEmpty) {
-                    return const Text('No attendance records for this month.');
+                    return Text(
+                      'No attendance records for this month.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    );
                   }
 
                   return ListView.builder(
@@ -187,12 +307,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           horizontal: 16,
                           vertical: 14,
                         ),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black26,
+                              color: Theme.of(
+                                context,
+                              ).shadowColor.withOpacity(0.26),
                               blurRadius: 10,
                               offset: Offset(2, 2),
                             ),
@@ -209,6 +331,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   style: TextStyle(
                                     fontFamily: 'NexaBold',
                                     fontSize: screenWidth / 22,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -217,7 +342,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   style: TextStyle(
                                     fontFamily: 'NexaRegular',
                                     fontSize: screenWidth / 26,
-                                    color: Colors.black54,
+                                    color: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.color,
                                   ),
                                 ),
                               ],
@@ -227,7 +354,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               style: TextStyle(
                                 fontFamily: 'NexaRegular',
                                 fontSize: screenWidth / 26,
-                                color: Colors.black54,
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.color,
                               ),
                             ),
                           ],

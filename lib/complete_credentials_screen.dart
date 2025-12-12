@@ -3,6 +3,7 @@ import 'package:attendanceapp/services/auth_service.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:attendanceapp/config/cloudinary_config.dart';
 import 'package:attendanceapp/login_page.dart';
+import 'package:attendanceapp/services/theme_service.dart';
 import 'terms_conditions_screen.dart';
 import 'pending_verification_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

@@ -3,6 +3,8 @@ import 'package:attendanceapp/admin_home.dart';
 import 'package:attendanceapp/teacher_home.dart';
 import 'package:attendanceapp/services/auth_service.dart';
 import 'package:attendanceapp/services/messaging_service.dart';
+import 'package:attendanceapp/services/theme_service.dart';
+import 'package:attendanceapp/config/app_theme.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:attendanceapp/login_page.dart';
 import 'package:attendanceapp/pending_verification_screen.dart';
@@ -46,20 +48,69 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final ThemeService _themeService = ThemeService();
+
+  @override
+  void initState() {
+    super.initState();
+    _themeService.initialize();
+    _themeService.addListener(_onThemeChanged);
+  }
+
+  @override
+  void dispose() {
+    _themeService.removeListener(_onThemeChanged);
+    super.dispose();
+  }
+
+  void _onThemeChanged() {
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+    return ThemeServiceProvider(
+      themeService: _themeService,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Attendance App',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: _themeService.themeMode,
+        home: KeyboardVisibilityProvider(child: const AuthCheck()),
       ),
-      home: KeyboardVisibilityProvider(child: AuthCheck()),
     );
+  }
+}
+
+/// InheritedWidget to provide ThemeService throughout the app
+class ThemeServiceProvider extends InheritedWidget {
+  final ThemeService themeService;
+
+  const ThemeServiceProvider({
+    super.key,
+    required this.themeService,
+    required super.child,
+  });
+
+  static ThemeService of(BuildContext context) {
+    final provider = context
+        .dependOnInheritedWidgetOfExactType<ThemeServiceProvider>();
+    assert(provider != null, 'No ThemeServiceProvider found in context');
+    return provider!.themeService;
+  }
+
+  @override
+  bool updateShouldNotify(ThemeServiceProvider oldWidget) {
+    return themeService != oldWidget.themeService;
   }
 }
 

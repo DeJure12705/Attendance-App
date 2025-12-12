@@ -8,6 +8,7 @@ import 'package:attendanceapp/login_page.dart';
 import 'package:attendanceapp/verification_screen.dart';
 import 'package:attendanceapp/unified_event_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:attendanceapp/main.dart';
 
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key});
@@ -97,17 +98,17 @@ class _AdminHomeState extends State<AdminHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       body: _selectedIndex == 0
           ? _buildDashboard(context)
           : const UsersListView(),
 
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Theme.of(context).shadowColor.withOpacity(0.04),
               blurRadius: 10,
               offset: const Offset(0, -4),
             ),
@@ -116,10 +117,10 @@ class _AdminHomeState extends State<AdminHome> {
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           elevation: 0,
           selectedItemColor: colSuccess,
-          unselectedItemColor: Colors.grey[400],
+          unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
           selectedLabelStyle: const TextStyle(
             fontFamily: 'NexaBold',
             fontSize: 12,
@@ -190,11 +191,11 @@ class _AdminHomeState extends State<AdminHome> {
                 elevation: 1,
                 flexibleSpace: FlexibleSpaceBar(
                   titlePadding: EdgeInsets.only(left: sidePadding, bottom: 16),
-                  title: const Text(
+                  title: Text(
                     'Admin Dashboard',
                     style: TextStyle(
                       fontFamily: 'NexaBold',
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 22,
                     ),
                   ),
@@ -209,20 +210,20 @@ class _AdminHomeState extends State<AdminHome> {
                     children: [
                       Text(
                         dateStr.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'NexaBold',
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           letterSpacing: 1.0,
                         ),
                       ),
                       const SizedBox(height: 8),
                       RichText(
-                        text: const TextSpan(
+                        text: TextSpan(
                           style: TextStyle(
                             fontFamily: 'NexaRegular',
                             fontSize: 24,
-                            color: Color(0xFF2D3436),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           children: [
                             TextSpan(text: 'Hello, '),
@@ -362,23 +363,37 @@ class _AdminHomeState extends State<AdminHome> {
 // ... SettingsScreen and UsersListView remain unchanged ...
 // Just ensure you include them when pasting the file.
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _notificationsEnabled = true;
 
   @override
   Widget build(BuildContext context) {
     const colSuccess = Color(0xFF28a745);
+    final themeService = ThemeServiceProvider.of(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'App Settings',
-          style: TextStyle(fontFamily: 'NexaBold', color: Colors.white),
+          style: TextStyle(
+            fontFamily: 'NexaBold',
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
         ),
         backgroundColor: colSuccess,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(
+          color: Theme.of(context).colorScheme.onPrimary,
+        ),
       ),
       body: Center(
         child: Container(
@@ -413,7 +428,9 @@ class SettingsScreen extends StatelessWidget {
                       color: Colors.orange,
                       title: 'Change Password',
                       subtitle: 'Update your security credentials',
-                      onTap: () {},
+                      onTap: () {
+                        _showChangePasswordDialog(context);
+                      },
                       showArrow: true,
                     ),
                   ],
@@ -441,34 +458,55 @@ class SettingsScreen extends StatelessWidget {
                         'Notifications',
                         style: TextStyle(fontFamily: 'NexaBold', fontSize: 14),
                       ),
-                      subtitle: const Text(
+                      subtitle: Text(
                         'Receive alerts for pending users',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                      value: true,
+                      value: _notificationsEnabled,
                       activeThumbColor: colSuccess,
-                      onChanged: (val) {},
+                      onChanged: (val) {
+                        setState(() {
+                          _notificationsEnabled = val;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              val
+                                  ? 'Notifications enabled'
+                                  : 'Notifications disabled',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
                     ),
                     const Divider(height: 1),
                     SwitchListTile(
                       secondary: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.dark_mode_outlined,
-                          color: Colors.black87,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       title: const Text(
                         'Dark Mode',
                         style: TextStyle(fontFamily: 'NexaBold', fontSize: 14),
                       ),
-                      value: false,
+                      value: isDarkMode,
                       activeThumbColor: colSuccess,
-                      onChanged: (val) {},
+                      onChanged: (val) {
+                        themeService.toggleTheme();
+                      },
                     ),
                   ],
                 ),
@@ -483,7 +521,9 @@ class SettingsScreen extends StatelessWidget {
                       icon: Icons.help_outline,
                       color: Colors.teal,
                       title: 'Help & Support',
-                      onTap: () {},
+                      onTap: () {
+                        _showHelpDialog(context);
+                      },
                       showArrow: true,
                     ),
                     const Divider(height: 1),
@@ -517,7 +557,7 @@ class SettingsScreen extends StatelessWidget {
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF7675),
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -546,9 +586,11 @@ class SettingsScreen extends StatelessWidget {
                                 backgroundColor: Colors.red,
                               ),
                               onPressed: () => Navigator.pop(ctx, true),
-                              child: const Text(
+                              child: Text(
                                 'Sign Out',
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(
+                                  color: Theme.of(ctx).colorScheme.onError,
+                                ),
                               ),
                             ),
                           ],
@@ -556,7 +598,9 @@ class SettingsScreen extends StatelessWidget {
                       );
 
                       if (confirm == true) {
-                        await AuthService().signOut();
+                        await AuthService().signOut(
+                          themeService: ThemeServiceProvider.of(context),
+                        );
                         if (context.mounted) {
                           Navigator.of(context).pushAndRemoveUntil(
                             MaterialPageRoute(
@@ -575,6 +619,251 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text(
+            'Change Password',
+            style: TextStyle(fontFamily: 'NexaBold'),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                if (isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: CircularProgressIndicator(),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final currentPassword = currentPasswordController.text
+                          .trim();
+                      final newPassword = newPasswordController.text.trim();
+                      final confirmPassword = confirmPasswordController.text
+                          .trim();
+
+                      if (currentPassword.isEmpty ||
+                          newPassword.isEmpty ||
+                          confirmPassword.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please fill in all fields'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newPassword != confirmPassword) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('New passwords do not match'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newPassword.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Password must be at least 6 characters',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isLoading = true);
+
+                      try {
+                        final user = fb.FirebaseAuth.instance.currentUser;
+                        if (user == null || user.email == null) {
+                          throw Exception('User not found');
+                        }
+
+                        // Re-authenticate user with current password
+                        final credential = fb.EmailAuthProvider.credential(
+                          email: user.email!,
+                          password: currentPassword,
+                        );
+
+                        await user.reauthenticateWithCredential(credential);
+
+                        // Update password
+                        await user.updatePassword(newPassword);
+
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password updated successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } on fb.FirebaseAuthException catch (e) {
+                        setDialogState(() => isLoading = false);
+                        String message = 'Failed to change password';
+                        if (e.code == 'wrong-password') {
+                          message = 'Current password is incorrect';
+                        } else if (e.code == 'weak-password') {
+                          message = 'New password is too weak';
+                        }
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(message)));
+                        }
+                      } catch (e) {
+                        setDialogState(() => isLoading = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: ${e.toString()}')),
+                          );
+                        }
+                      }
+                    },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Help & Support',
+          style: TextStyle(fontFamily: 'NexaBold'),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Need assistance? Here are some helpful resources:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              _buildHelpItem(
+                Icons.description_outlined,
+                'User Guide',
+                'Learn how to use the attendance system effectively',
+              ),
+              const SizedBox(height: 12),
+              _buildHelpItem(
+                Icons.contact_support_outlined,
+                'Contact Support',
+                'Email: support@attendance.app\nPhone: 09512297022',
+              ),
+              const SizedBox(height: 12),
+              _buildHelpItem(
+                Icons.bug_report_outlined,
+                'Report a Bug',
+                'Found an issue? Let us know so we can fix it',
+              ),
+              const SizedBox(height: 12),
+              _buildHelpItem(
+                Icons.feedback_outlined,
+                'Send Feedback',
+                'Share your suggestions for improvement',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHelpItem(IconData icon, String title, String description) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: const Color(0xFF28a745)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontFamily: 'NexaBold', fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -645,7 +934,7 @@ class _UsersListViewState extends State<UsersListView> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colSuccess,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(ctx).colorScheme.onPrimary,
                 ),
                 onPressed: isLoading
                     ? null
@@ -850,7 +1139,10 @@ class _UsersListViewState extends State<UsersListView> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(ctx).colorScheme.onError),
+            ),
           ),
         ],
       ),
@@ -866,25 +1158,27 @@ class _UsersListViewState extends State<UsersListView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       appBar: AppBar(
         toolbarHeight: 80.0,
-        title: const Text(
+        title: Text(
           'User Management',
           style: TextStyle(
             fontFamily: 'NexaBold',
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             fontSize: 22,
           ),
         ),
         backgroundColor: colSuccess,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(
+          color: Theme.of(context).colorScheme.onPrimary,
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddUserDialog,
         backgroundColor: colSuccess,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),
       body: Center(
         child: Container(
@@ -920,11 +1214,13 @@ class _UsersListViewState extends State<UsersListView> {
 
                   return Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Theme.of(
+                            context,
+                          ).shadowColor.withOpacity(0.05),
                           blurRadius: 5,
                           offset: const Offset(0, 2),
                         ),
@@ -1018,10 +1314,10 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'NexaBold',
         fontSize: 13,
-        color: Colors.grey,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         letterSpacing: 1.2,
       ),
     );
@@ -1035,11 +1331,11 @@ class _SettingsGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Theme.of(context).shadowColor.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1085,11 +1381,18 @@ class _SettingsTile extends StatelessWidget {
       subtitle: subtitle != null
           ? Text(
               subtitle!,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             )
           : null,
       trailing: showArrow
-          ? const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey)
+          ? Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            )
           : null,
       onTap: onTap,
     );

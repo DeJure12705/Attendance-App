@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendanceapp/model/user.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:attendanceapp/services/theme_service.dart';
 
 class AuthService {
   final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
@@ -163,7 +164,7 @@ class AuthService {
     }
   }
 
-  Future<void> signOut() async {
+  Future<void> signOut({ThemeService? themeService}) async {
     print('[SIGNOUT] Starting sign-out sequence');
     // Sign out from Firebase
     await _auth.signOut();
@@ -179,6 +180,12 @@ class AuthService {
       }
     } catch (e) {
       print('[SIGNOUT] Google sign out error: $e');
+    }
+
+    // Reset theme to default (light mode)
+    if (themeService != null) {
+      await themeService.resetTheme();
+      print('[SIGNOUT] Theme reset to default');
     }
 
     // Clear user data
